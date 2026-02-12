@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SearchForm from '../components/forms/SearchForm';
 import TripCard from '../components/cards/TripCard';
 import Pagination from '@/shared/components/Pagination';
 import MobileSearchButton from '../components/forms/MobileSearchButton';
+import LoadingScreen from '@/shared/components/LoadingScreen';
 import { Trip } from '../types';
 
 // Mock data for available trips
@@ -66,16 +68,26 @@ const mockTrips: Trip[] = [
 const TicketerDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = 5; // As shown in the image
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigate = useNavigate();
 
   const handleTripSelect = (trip: Trip) => {
     console.log('Selected trip:', trip);
-    // Handle trip selection - navigate to booking page, etc.
+    setIsNavigating(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      navigate('/booking/identify');
+    }, 1500);
   };
 
   const handleSearch = () => {
     console.log('Search triggered');
     // Handle search - fetch new trips based on filters
   };
+
+  if (isNavigating) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-170px)]">

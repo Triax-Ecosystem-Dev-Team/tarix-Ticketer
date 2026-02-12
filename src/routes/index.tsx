@@ -1,8 +1,9 @@
 import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
 import { TicketerDashboard } from '@/modules/ticketer/TicketerModule';
+import UserIdentification from '@/modules/ticketer/views/UserIdentification';
 
-// Placeholder components - you'll create these later
+// Placeholder components
 const BusStatusPage = () => (
   <div className="p-6">
     <h1 className="text-2xl font-bold">Bus Status</h1>
@@ -41,9 +42,14 @@ export const router = createBrowserRouter([
         element: <TicketerDashboard />,
       },
       {
+        path: 'booking/identify',
+        element: <UserIdentification />,
+      },
+      {
         path: 'bus-status',
         element: <BusStatusPage />,
       },
+// ... existing code ...
       {
         path: 'overview',
         element: <OverviewPage />,
