@@ -16,9 +16,17 @@ const UserIdentification: React.FC = () => {
       // Simulate loading for next step
       setTimeout(() => {
         console.log('Proceeding with User ID:', userId);
-        navigate('/booking/passenger-details');
+        // Navigate to seat selection directly for existing users
+        navigate('/booking/select-seat');
       }, 1500);
     }
+  };
+
+  const handleNewUser = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+        navigate('/booking/passenger-details');
+    }, 1500);
   };
 
   const handleBack = () => {
@@ -90,6 +98,7 @@ const UserIdentification: React.FC = () => {
             {/* New User Button */}
             <button
               type="button"
+              onClick={handleNewUser}
               className="w-full py-3.5 bg-white border border-brand-blue-dark text-brand-blue-dark rounded-xl font-bold text-sm hover:bg-brand-blue-dark hover:text-white active:scale-[0.98] transition-all shadow-sm hover:shadow-md"
             >
               I'm a New User

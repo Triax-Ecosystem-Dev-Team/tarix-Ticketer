@@ -2,6 +2,8 @@ import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
 import { TicketerDashboard } from '@/modules/ticketer/TicketerModule';
 import UserIdentification from '@/modules/ticketer/views/UserIdentification';
+import PassengerDetails from '@/modules/ticketer/views/PassengerDetails';
+import SeatSelection from '@/modules/ticketer/views/SeatSelection';
 
 // Placeholder components
 const BusStatusPage = () => (
@@ -44,6 +46,14 @@ export const router = createBrowserRouter([
       {
         path: 'booking/identify',
         element: <UserIdentification />,
+      },
+      {
+        path: 'booking/passenger-details',
+        element: <PassengerDetails />,
+      },
+      {
+        path: 'booking/select-seat',
+        element: <SeatSelection />,
       },
       {
         path: 'bus-status',
