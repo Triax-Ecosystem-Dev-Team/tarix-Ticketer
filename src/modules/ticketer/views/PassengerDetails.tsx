@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import logo from '@/assets/images/logo.webp';
-import LoadingScreen from '@/shared/components/LoadingScreen';
+import logo from '../../../assets/images/logo.webp';
+import LoadingScreen from '../../../shared/components/LoadingScreen';
 
 const PassengerDetails: React.FC = () => {
   const navigate = useNavigate();

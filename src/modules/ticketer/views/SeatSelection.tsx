@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import logo from '../../../assets/images/logo.webp';
+import LoadingScreen from '../../../shared/components/LoadingScreen';
 
 // Seat types
 type SeatStatus = 'available' | 'occupied' | 'selected';

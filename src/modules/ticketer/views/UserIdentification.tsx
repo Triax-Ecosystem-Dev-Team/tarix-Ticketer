@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import LoadingScreen from '@/shared/components/LoadingScreen';
+import LoadingScreen from '../../../shared/components/LoadingScreen';
 
 const UserIdentification: React.FC = () => {
   const navigate = useNavigate();

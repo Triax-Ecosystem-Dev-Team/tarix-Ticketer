@@ -1,9 +1,9 @@
 import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
-import { TicketerDashboard } from '@/modules/ticketer/TicketerModule';
-import UserIdentification from '@/modules/ticketer/views/UserIdentification';
-import PassengerDetails from '@/modules/ticketer/views/PassengerDetails';
-import SeatSelection from '@/modules/ticketer/views/SeatSelection';
+import TicketerDashboard from '../modules/ticketer/views/TicketerDashboard';
+import UserIdentification from '../modules/ticketer/views/UserIdentification';
+import PassengerDetails from '../modules/ticketer/views/PassengerDetails';
+import SeatSelection from '../modules/ticketer/views/SeatSelection';
 
 // Placeholder components
 const BusStatusPage = () => (
@@ -59,7 +59,6 @@ export const router = createBrowserRouter([
         path: 'bus-status',
         element: <BusStatusPage />,
       },
-// ... existing code ...
       {
         path: 'overview',
         element: <OverviewPage />,

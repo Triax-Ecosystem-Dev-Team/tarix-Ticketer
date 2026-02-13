@@ -1,7 +1,7 @@
 import React from 'react';
 import { Users, Clock, Calendar, MapPin } from 'lucide-react';
 import { Trip } from '../../types';
-import { useDateFormat } from '@/shared/utils/useDateFormat';
+import { useDateFormat } from '../../../../shared/utils/useDateFormat';
 
 interface TripCardProps {
   trip: Trip;

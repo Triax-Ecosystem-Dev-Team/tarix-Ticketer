@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from '@/assets/images/logo.webp';
+import logo from '../../assets/images/logo.webp';
 
 const LoadingScreen: React.FC = () => {
   return (

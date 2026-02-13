@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Zap, Wallet } from 'lucide-react';
-import { useBookingStore } from '@/modules/ticketer/store/useBookingStore';
-import logo from '@/assets/images/logo.webp';
+import { useBookingStore } from '../../modules/ticketer/store/useBookingStore';
+import CashbackModal from '../../modules/ticketer/components/modals/CashbackModal';
+import logo from '../../assets/images/logo.webp';
 
 const Header: React.FC = () => {
+  const [isCashbackModalOpen, setIsCashbackModalOpen] = React.useState(false);
   const user = useBookingStore((state) => state.user);
 
   // Format wallet balance
@@ -57,7 +59,10 @@ const Header: React.FC = () => {
         {/* Right Section */}
         <div className="flex items-center gap-3">
           {/* Cashback Button */}
-          <button className="flex items-center gap-2 px-5 py-2 rounded-full bg-cashback-green text-white text-[13px] font-semibold shadow-[0_2px_8px_rgba(0,214,101,0.25)] hover:bg-[#00C05B] hover:shadow-[0_4px_12px_rgba(0,214,101,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 ease-out">
+          <button 
+            onClick={() => setIsCashbackModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-2 rounded-full bg-cashback-green text-white text-[13px] font-semibold shadow-[0_2px_8px_rgba(0,214,101,0.25)] hover:bg-[#00C05B] hover:shadow-[0_4px_12px_rgba(0,214,101,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 ease-out"
+          >
             <Zap className="w-4 h-4" />
             <span className="hidden sm:inline whitespace-nowrap">
               Get 0.25% Cashback!
@@ -92,6 +97,10 @@ const Header: React.FC = () => {
           </div>
         </div>
       </div>
+      <CashbackModal 
+        isOpen={isCashbackModalOpen} 
+        onClose={() => setIsCashbackModalOpen(false)} 
+      />
     </header>
   );
 };

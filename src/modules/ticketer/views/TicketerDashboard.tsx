@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchForm from '../components/forms/SearchForm';
 import TripCard from '../components/cards/TripCard';
-import Pagination from '@/shared/components/Pagination';
+import Pagination from '../../../shared/components/Pagination';
 import MobileSearchButton from '../components/forms/MobileSearchButton';
-import LoadingScreen from '@/shared/components/LoadingScreen';
+import LoadingScreen from '../../../shared/components/LoadingScreen';
 import { Trip } from '../types';
 
 // Mock data for available trips
