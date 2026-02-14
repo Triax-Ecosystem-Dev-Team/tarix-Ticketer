@@ -55,7 +55,7 @@ const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeatId, onSeatSelect }
       {/* Bus Layout - CSS Grid */}
       <div className="max-w-md mx-auto">
         <div
-          className="grid gap-y-2 gap-x-1"
+          className="grid gap-y-4 gap-x-2"
           style={{
             gridTemplateColumns: '3.5rem 3.5rem 0.15fr 3.5rem 3.5rem',
             justifyItems: 'stretch',

@@ -39,7 +39,7 @@ const SeatSelection: React.FC = () => {
   const handleContinue = () => {
     if (!selectedSeat) return;
     console.log('Selected Seat:', selectedSeat);
-    // navigate('/booking/payment');
+    navigate('/booking/baggage');
   };
 
   const handleBack = () => {
@@ -148,7 +148,7 @@ const SeatSelection: React.FC = () => {
                 disabled={!selectedSeat}
                 className={`w-full py-4 rounded-xl font-bold text-base transition-all ${
                   selectedSeat
-                    ? 'bg-[#00C853] text-white hover:bg-[#00B347] active:scale-[0.98] shadow-md'
+                    ? 'bg-[#00A97C] text-white hover:bg-[#008F68] active:scale-[0.98] shadow-md'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >

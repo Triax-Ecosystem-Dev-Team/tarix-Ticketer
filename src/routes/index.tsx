@@ -4,6 +4,7 @@ import TicketerDashboard from '../modules/ticketer/views/TicketerDashboard';
 import UserIdentification from '../modules/ticketer/views/UserIdentification';
 import PassengerDetails from '../modules/ticketer/views/PassengerDetails';
 import SeatSelection from '../modules/ticketer/views/SeatSelection';
+import ExtraBaggage from '../modules/ticketer/views/ExtraBaggage';
 
 // Placeholder components
 const BusStatusPage = () => (
@@ -54,6 +55,10 @@ export const router = createBrowserRouter([
       {
         path: 'booking/select-seat',
         element: <SeatSelection />,
+      },
+      {
+        path: 'booking/baggage',
+        element: <ExtraBaggage />,
       },
       {
         path: 'bus-status',

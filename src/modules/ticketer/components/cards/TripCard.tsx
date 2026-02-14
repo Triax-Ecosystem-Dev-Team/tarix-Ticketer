@@ -12,7 +12,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect }) => {
   const { formatDate } = useDateFormat();
 
   return (
-    <div className="bg-white rounded-xl border border-border-gray shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl border border-border-gray shadow-sm hover:shadow-md hover:border-primary-blue transition-all duration-300">
       {/* Mobile Layout (default) */}
       <div className="block sm:hidden">
         {/* Header with Date and Time */}
