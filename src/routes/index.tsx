@@ -5,6 +5,9 @@ import UserIdentification from '../modules/ticketer/views/UserIdentification';
 import PassengerDetails from '../modules/ticketer/views/PassengerDetails';
 import SeatSelection from '../modules/ticketer/views/SeatSelection';
 import ExtraBaggage from '../modules/ticketer/views/ExtraBaggage';
+import PaymentMethod from '../modules/ticketer/views/PaymentMethod';
+import BookingConfirmation from '../modules/ticketer/views/BookingConfirmation';
+import BookingSuccess from '../modules/ticketer/views/BookingSuccess';
 
 // Placeholder components
 const BusStatusPage = () => (
@@ -59,6 +62,18 @@ export const router = createBrowserRouter([
       {
         path: 'booking/baggage',
         element: <ExtraBaggage />,
+      },
+      {
+        path: 'booking/payment',
+        element: <PaymentMethod />,
+      },
+      {
+        path: 'booking/confirmation',
+        element: <BookingConfirmation />,
+      },
+      {
+        path: 'booking/success',
+        element: <BookingSuccess />,
       },
       {
         path: 'bus-status',
