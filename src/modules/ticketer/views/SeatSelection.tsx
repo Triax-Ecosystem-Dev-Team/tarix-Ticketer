@@ -1,16 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../../../assets/images/logo.webp';
-import LoadingScreen from '../../../shared/components/LoadingScreen';
-
-// Seat types
-type SeatStatus = 'available' | 'occupied' | 'selected';
-
-interface Seat {
-  id: string;
-  status: SeatStatus;
-  amenities?: string[];
-}
+import SeatMap, { Seat } from '../components/seat-map/SeatMap';
 
 const SeatSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -18,25 +8,27 @@ const SeatSelection: React.FC = () => {
 
   // Seat layout with amenities
   const [seats] = useState<Seat[]>([
+    // Row A (right side only — driver occupies left)
     { id: 'A1', status: 'available', amenities: ['Aisle access'] },
     { id: 'A2', status: 'available', amenities: ['Window seat'] },
-    { id: 'B1', status: 'occupied', amenities: ['Aisle access'] },
-    { id: 'B2', status: 'available', amenities: [] },
-    { id: 'B3', status: 'available', amenities: [] },
+    // Row B
+    { id: 'B1', status: 'occupied', amenities: ['Window seat'] },
+    { id: 'B2', status: 'available', amenities: ['Aisle access'] },
+    { id: 'B3', status: 'available', amenities: ['Aisle access'] },
     { id: 'B4', status: 'available', amenities: ['Window seat'] },
-    { id: 'C1', status: 'available', amenities: ['Aisle access'] },
-    { id: 'C2', status: 'available', amenities: [] },
-    { id: 'C3', status: 'available', amenities: [] },
+    // Row C
+    { id: 'C1', status: 'available', amenities: ['Window seat'] },
+    { id: 'C2', status: 'available', amenities: ['Aisle access'] },
+    { id: 'C3', status: 'available', amenities: ['Aisle access'] },
     { id: 'C4', status: 'occupied', amenities: ['Window seat'] },
-    { id: 'D1', status: 'available', amenities: ['Aisle access'] },
-    { id: 'D2', status: 'available', amenities: [] },
-    { id: 'D3', status: 'available', amenities: [] },
+    // Row D
+    { id: 'D1', status: 'available', amenities: ['Window seat'] },
+    { id: 'D2', status: 'available', amenities: ['Aisle access'] },
+    { id: 'D3', status: 'available', amenities: ['Aisle access'] },
     { id: 'D4', status: 'available', amenities: ['Window seat'] },
   ]);
 
-  const handleSeatClick = (seatId: string, status: SeatStatus) => {
-    if (status === 'occupied') return;
-    
+  const handleSeatSelect = (seatId: string) => {
     if (selectedSeat === seatId) {
       setSelectedSeat(null); // Deselect
     } else {
@@ -62,31 +54,7 @@ const SeatSelection: React.FC = () => {
 
   const selectedSeatDetails = getSelectedSeatDetails();
 
-  // Helper to render a seat button
-  const renderSeat = (seatId: string) => {
-    const seat = seats.find(s => s.id === seatId);
-    if (!seat) return <div className="w-14 h-14"></div>;
 
-    const isSelected = selectedSeat === seatId;
-    
-    let bgClass = 'bg-gray-100 text-text-dark hover:bg-gray-200';
-    if (seat.status === 'occupied') {
-      bgClass = 'bg-[#FF5252] text-white cursor-not-allowed';
-    }
-    if (isSelected) {
-      bgClass = 'bg-[#0095FF] text-white shadow-lg scale-105';
-    }
-
-    return (
-      <button
-        onClick={() => handleSeatClick(seat.id, seat.status)}
-        disabled={seat.status === 'occupied'}
-        className={`w-14 h-14 rounded-xl text-sm font-bold flex items-center justify-center transition-all duration-200 ${bgClass}`}
-      >
-        {seat.id}
-      </button>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -122,81 +90,11 @@ const SeatSelection: React.FC = () => {
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6">
           
           {/* Left: Seat Map */}
-          <div className="bg-white rounded-2xl p-8 lg:p-12 shadow-sm border border-gray-200">
-            <h2 className="text-2xl font-bold text-text-dark mb-12">
-              Select Your Seat
-            </h2>
-
-            {/* Bus Layout */}
-            <div className="flex flex-col items-center max-w-lg mx-auto">
-              <div className="space-y-5 w-full">
-                
-                {/* Driver Row */}
-                <div className="flex justify-center gap-16 mb-8">
-                  <div className="w-14 h-14"></div>
-                  <div className="w-32 h-14 bg-[#2D3748] text-white rounded-xl flex items-center justify-center text-xs font-bold uppercase tracking-wider">
-                    Driver
-                  </div>
-                  <div className="flex gap-5">
-                    {renderSeat('A1')}
-                    {renderSeat('A2')}
-                  </div>
-                </div>
-
-                {/* Row B */}
-                <div className="flex justify-between gap-16">
-                  <div className="flex gap-5">
-                    {renderSeat('B1')}
-                    {renderSeat('B2')}
-                  </div>
-                  <div className="flex gap-5">
-                    {renderSeat('B3')}
-                    {renderSeat('B4')}
-                  </div>
-                </div>
-
-                {/* Row C */}
-                <div className="flex justify-between gap-16">
-                  <div className="flex gap-5">
-                    {renderSeat('C1')}
-                    {renderSeat('C2')}
-                  </div>
-                  <div className="flex gap-5">
-                    {renderSeat('C3')}
-                    {renderSeat('C4')}
-                  </div>
-                </div>
-
-                {/* Row D */}
-                <div className="flex justify-between gap-16">
-                  <div className="flex gap-5">
-                    {renderSeat('D1')}
-                    {renderSeat('D2')}
-                  </div>
-                  <div className="flex gap-5">
-                    {renderSeat('D3')}
-                    {renderSeat('D4')}
-                  </div>
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="flex justify-center gap-8 mt-16">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-lg bg-gray-100 border border-gray-200"></div>
-                  <span className="text-sm text-text-gray">Available</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-lg bg-[#0095FF]"></div>
-                  <span className="text-sm text-text-gray">Selected</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-lg bg-[#FF5252]"></div>
-                  <span className="text-sm text-text-gray">Occupied</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SeatMap 
+            seats={seats}
+            selectedSeatId={selectedSeat}
+            onSeatSelect={handleSeatSelect}
+          />
 
           {/* Right: Selection Panel */}
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 h-fit">
