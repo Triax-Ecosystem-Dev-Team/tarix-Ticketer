@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Zap, Wallet } from 'lucide-react';
 import { useBookingStore } from '../../modules/ticketer/store/useBookingStore';
 import CashbackModal from '../../modules/ticketer/components/modals/CashbackModal';
+import SalesOverviewModal from '../../modules/ticketer/components/SalesOverviewModal';
 import logo from '../../assets/images/logo.webp';
 
 const Header: React.FC = () => {
   const [isCashbackModalOpen, setIsCashbackModalOpen] = React.useState(false);
+  const [isSalesOverviewOpen, setIsSalesOverviewOpen] = React.useState(false);
   const user = useBookingStore((state) => state.user);
 
   // Format wallet balance
@@ -45,13 +47,13 @@ const Header: React.FC = () => {
               </Link>
             </li>
             <li>
-              <Link
-                to="/overview"
+              <button
+                onClick={() => setIsSalesOverviewOpen(true)}
                 className="text-text-gray text-sm font-medium hover:text-primary-blue transition-colors relative group"
               >
                 Overview
                 <span className="absolute -bottom-4 left-0 w-0 h-0.5 bg-primary-blue transition-all duration-300 group-hover:w-full" />
-              </Link>
+              </button>
             </li>
           </ul>
         </div>
@@ -100,6 +102,10 @@ const Header: React.FC = () => {
       <CashbackModal 
         isOpen={isCashbackModalOpen} 
         onClose={() => setIsCashbackModalOpen(false)} 
+      />
+      <SalesOverviewModal
+        isOpen={isSalesOverviewOpen}
+        onClose={() => setIsSalesOverviewOpen(false)}
       />
     </header>
   );

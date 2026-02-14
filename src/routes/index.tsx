@@ -10,12 +10,7 @@ import BookingConfirmation from '../modules/ticketer/views/BookingConfirmation';
 import BookingSuccess from '../modules/ticketer/views/BookingSuccess';
 
 // Placeholder components
-const BusStatusPage = () => (
-  <div className="p-6">
-    <h1 className="text-2xl font-bold">Bus Status</h1>
-    <p className="text-text-gray mt-2">Real-time bus tracking</p>
-  </div>
-);
+import BusStatusPage from '../modules/ticketer/views/BusStatusPage';
 
 const OverviewPage = () => (
   <div className="p-6">

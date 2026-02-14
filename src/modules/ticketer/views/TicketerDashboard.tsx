@@ -6,6 +6,7 @@ import Pagination from '../../../shared/components/Pagination';
 import MobileSearchButton from '../components/forms/MobileSearchButton';
 import LoadingScreen from '../../../shared/components/LoadingScreen';
 import { Trip } from '../types';
+import Header from '../../../shared/components/Header';
 
 // Mock data for available trips
 const mockTrips: Trip[] = [
@@ -90,7 +91,9 @@ const TicketerDashboard: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-170px)]">
+    <div className="flex flex-col min-h-[calc(100vh-170px)]">
+      <Header />
+      <div className="flex flex-1">
       {/* Left Sidebar - Search Filters (Desktop) */}
       <aside className="hidden lg:block w-[230px] flex-shrink-0">
         <div className="sticky top-[50px]">
@@ -124,6 +127,7 @@ const TicketerDashboard: React.FC = () => {
 
       {/* Mobile Search Button */}
       <MobileSearchButton />
+      </div>
     </div>
   );
 };
