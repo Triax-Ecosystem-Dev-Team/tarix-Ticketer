@@ -47,7 +47,7 @@ const BusStatusPage: React.FC = () => {
             <img src={logoWhite} alt="TARIX Logo" className="h-8 w-auto" />
             
             <nav className="flex items-center gap-6">
-                <button className="text-blue-100 text-sm font-medium hover:text-white transition-colors">Search</button>
+                <button onClick={() => navigate('/')} className="text-blue-100 text-sm font-medium hover:text-white transition-colors">Search</button>
                 <div className="relative py-5">
                     <button className="text-white text-sm font-bold">Bus Status</button>
                     <div className="absolute bottom-0 left-0 w-full h-1 bg-white rounded-t-full" />

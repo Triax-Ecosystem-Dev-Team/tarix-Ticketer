@@ -11,6 +11,7 @@ import BookingSuccess from '../modules/ticketer/views/BookingSuccess';
 
 // Placeholder components
 import BusStatusPage from '../modules/ticketer/views/BusStatusPage';
+import PassengerList from '../modules/ticketer/views/PassengerList';
 
 const OverviewPage = () => (
   <div className="p-6">
@@ -73,6 +74,10 @@ export const router = createBrowserRouter([
       {
         path: 'bus-status',
         element: <BusStatusPage />,
+      },
+      {
+        path: 'bus-status/passengers/:busId',
+        element: <PassengerList />,
       },
       {
         path: 'overview',

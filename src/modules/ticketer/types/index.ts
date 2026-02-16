@@ -30,3 +30,11 @@ export interface Booking {
     status: 'pending' | 'confirmed' | 'cancelled';
     createdAt: Date;
 }
+// Passenger type for manifest
+export interface Passenger {
+    id: string;
+    fullName: string;
+    seatNumber: string;
+    phone: string;
+    userId: string;
+}

@@ -121,8 +121,20 @@ const BusStatusCard: React.FC<BusStatusCardProps> = ({ bus }) => {
                  </p>
              </div>
          </div>
-         <button className="flex items-center gap-1 text-[11px] font-bold text-[#0095FF] hover:text-[#007ACC] transition-colors">
-             View List <ChevronRight className="w-3.5 h-3.5" />
+         <button 
+             onClick={() => {
+                 // Prevent bubbling if clicking the container
+                 // e.stopPropagation(); 
+                 // Assuming we want to navigate
+                 // For now, let's use window.location or navigate if available
+                 // But since useNavigate isn't imported, let's just make it a link or use proper navigation
+                 // Actually this component likely needs useNavigate
+             }}
+             className="flex items-center gap-1 text-[11px] font-bold text-[#0095FF] hover:text-[#007ACC] transition-colors"
+         >
+             <a href={`/bus-status/passengers/${bus.id}`} className="flex items-center gap-1">
+                View List <ChevronRight className="w-3.5 h-3.5" />
+             </a>
          </button>
       </div>
       

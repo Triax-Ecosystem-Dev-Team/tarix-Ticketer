@@ -13,7 +13,7 @@ const PassengerDetails: React.FC = () => {
     // Simulate API call/processing
     setTimeout(() => {
         // Navigate to next step (e.g., Seat Selection)
-        // navigate('/booking/seat-selection'); 
+        navigate('/booking/select-seat'); 
         console.log('Navigate to next step');
         setIsLoading(false); 
     }, 1500);
@@ -225,6 +225,7 @@ const PassengerDetails: React.FC = () => {
             <div className="space-y-3 pt-4">
                 <button
                     type="submit"
+                    
                     className="w-full bg-[#00C853] text-white py-3.5 rounded-xl font-bold text-sm hover:bg-[#00A844] active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
                 >
                     Continue
