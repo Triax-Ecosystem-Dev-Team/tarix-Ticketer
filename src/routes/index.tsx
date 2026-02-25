@@ -13,6 +13,9 @@ import BookingSuccess from '../modules/ticketer/views/BookingSuccess';
 import BusStatusPage from '../modules/ticketer/views/BusStatusPage';
 import PassengerList from '../modules/ticketer/views/PassengerList';
 
+// Admin Module
+import { AdminLayout, AdminDashboard } from '../modules/admin/AdminModule';
+
 const OverviewPage = () => (
   <div className="p-6">
     <h1 className="text-2xl font-bold">Overview</h1>
@@ -90,6 +93,16 @@ export const router = createBrowserRouter([
       {
         path: '*',
         element: <NotFoundPage />,
+      },
+    ],
+  },
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      {
+        index: true,
+        element: <AdminDashboard />,
       },
     ],
   },
