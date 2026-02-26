@@ -14,7 +14,7 @@ const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
 
   return (
     <header className="h-16 sm:h-20 bg-white flex items-center justify-between px-4 sm:px-6 lg:px-8
-                       fixed top-0 right-0 left-0 lg:left-64 z-10 font-sans
+                       fixed top-0 right-0 left-0 lg:left-64 z-20 font-sans
                        border-b border-gray-100 shadow-sm">
 
       {/* Left: Hamburger (mobile) + Page Title */}
