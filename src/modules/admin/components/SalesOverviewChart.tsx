@@ -1,78 +1,260 @@
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import { useState, useEffect, useCallback } from 'react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { TrendingUp } from 'lucide-react';
+import clsx from 'clsx';
+
+// ── 🔌 MOCK API — swap with fetch("/api/revenue/trend") when ready ────────────
+async function fetchRevenueTrend() {
+  await new Promise(r => setTimeout(r, 900));
+  return {
+    days: [
+      { day: 'Mon', value: 1800000 },
+      { day: 'Tue', value: 2100000 },
+      { day: 'Wed', value: 1950000 },
+      { day: 'Thu', value: 2450000 },
+      { day: 'Fri', value: 2750000 },
+      { day: 'Sat', value: 2800000 },
+      { day: 'Sun', value: 2350000 },
+    ],
+    totalRevenue:  15750000,
+    totalChange:   12,
+    averageDaily:  2250000,
+    averageChange: 5,
+  };
+}
+
+type TrendData = Awaited<ReturnType<typeof fetchRevenueTrend>>;
+type DayPoint  = TrendData['days'][number];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const fmtAxis = (v: number) => `₦${(v / 1_000_000).toFixed(1)}M`;
+const fmtFull = (v: number) => `₦${v.toLocaleString()}`;
+
+function deriveStats(days: DayPoint[]) {
+  if (!days.length) return { highDay: '', highVal: 0, lowDay: '', lowVal: 0 };
+  const high = days.reduce((a, b) => (b.value > a.value ? b : a));
+  const low  = days.reduce((a, b) => (b.value < a.value ? b : a));
+  return { highDay: high.day, highVal: high.value, lowDay: low.day, lowVal: low.value };
+}
+
+// ── Custom tooltip ────────────────────────────────────────────────────────────
+
+interface CustomTooltipProps {
+  active?:  boolean;
+  payload?: Array<{ value?: number }>;
+  label?:   string | number;
+}
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+  if (!active || !payload?.length) return null;
+  const val = payload[0]?.value;
+  return (
+    <div className="bg-[#1a2233] text-white rounded-lg px-3 py-2 shadow-xl pointer-events-none">
+      <p className="text-[11px] font-medium text-slate-400 mb-0.5">{String(label)}</p>
+      <p className="text-[13px] font-semibold">{val != null ? fmtFull(val) : '—'}</p>
+    </div>
+  );
+}
+
+// ── Skeleton helpers ──────────────────────────────────────────────────────────
+
+function Skel({ className }: { className: string }) {
+  return <div className={clsx('rounded-md bg-gray-200 animate-pulse', className)} />;
+}
+
+function ChartSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 flex-1 justify-end pt-2">
+      <Skel className="w-full h-44 rounded-xl" />
+      <div className="flex justify-between mt-1">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skel key={i} className="w-7 h-3" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StatsSkeleton() {
+  const rows = [70, 50, 90, 50, 70, 50, 90, 50];
+  return (
+    <div className="flex flex-col gap-2">
+      {rows.map((w, i) => (
+        <div
+          key={i}
+          className={clsx('rounded-md bg-gray-200 animate-pulse', i % 2 === 0 ? 'h-5' : 'h-3')}
+          style={{ width: `${w}%`, marginBottom: i % 2 !== 0 ? 8 : 0 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Stat block ────────────────────────────────────────────────────────────────
+
+interface StatBlockProps {
+  label:     string;
+  value:     string;
+  sub?:      string;
+  subColor?: string;
+  large?:    boolean;
+  last?:     boolean;
+}
+
+function StatBlock({ label, value, sub, subColor = 'text-green-500', large = false, last = false }: StatBlockProps) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-1.5">
+        {label}
+      </p>
+      <p className={clsx(
+        'font-bold text-gray-900 leading-none mb-1.5 tracking-tight',
+        large ? 'text-[22px]' : 'text-[18px]'
+      )}>
+        {value}
+      </p>
+      {sub && (
+        <p className={clsx('flex items-center gap-1 text-[12px] font-semibold', subColor)}>
+          {sub}
+        </p>
+      )}
+      {!last && <div className="h-px bg-gray-100 my-4" />}
+    </div>
+  );
+}
+
+// ── SalesOverviewChart (Revenue Trend) ───────────────────────────────────────
 
 const SalesOverviewChart = () => {
-  const data = [
-    { name: 'Mon', sales: 4000 },
-    { name: 'Tue', sales: 3000 },
-    { name: 'Wed', sales: 2000 },
-    { name: 'Thu', sales: 2780 },
-    { name: 'Fri', sales: 1890 },
-    { name: 'Sat', sales: 2390 },
-    { name: 'Sun', sales: 3490 },
-  ];
+  const [data,    setData]    = useState<TrendData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try { setData(await fetchRevenueTrend()); }
+    catch (e) { setError((e as Error).message || 'Failed to load'); }
+    finally   { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const stats = data ? deriveStats(data.days) : null;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h3 className="font-bold text-lg text-gray-800">Sales Overview</h3>
-          <p className="text-sm text-gray-500">Weekly revenue performance</p>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden
+                    grid grid-cols-1 sm:grid-cols-[1fr_210px]">
+
+      {/* ── Chart panel ── */}
+      <div className="flex flex-col p-5 sm:p-6 min-w-0">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <h3 className="text-base font-bold text-gray-900 tracking-tight">Revenue Trend</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Last 7 days</p>
+          </div>
+          {!loading && !error && data && (
+            <div className="flex items-center gap-1 text-[12px] font-semibold text-green-500 mt-0.5">
+              <TrendingUp size={13} />
+              +{data.totalChange}%
+            </div>
+          )}
         </div>
-        <select className="bg-gray-50 border border-gray-200 text-gray-600 text-sm rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-          <option>This Week</option>
-          <option>Last Week</option>
-          <option>This Month</option>
-        </select>
+
+        {/* Chart area */}
+        <div className="mt-4 flex-1 min-h-[300px]">
+          {loading ? (
+            <ChartSkeleton />
+          ) : error ? (
+            <div className="flex items-center gap-3 text-red-500 text-sm mt-6">
+              <span>⚠️ {error}</span>
+              <button
+                onClick={load}
+                className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={data!.days} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="4 4" stroke="#f0f4f8" vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  dy={6}
+                />
+                <YAxis
+                  tickFormatter={fmtAxis}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  width={56}
+                  tickCount={5}
+                />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  cursor={{ stroke: '#e2e8f0', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3bb6e0"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 5, fill: '#3bb6e0', stroke: '#fff', strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
 
-      <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-            <XAxis 
-              dataKey="name" 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#9ca3af', fontSize: 12 }} 
-              dy={10}
+      {/* ── Stats panel ── */}
+      <div className="border-t sm:border-t-0 sm:border-l border-gray-100
+                      p-5 sm:p-6 grid grid-cols-2 sm:grid-cols-1 gap-x-6
+                      sm:flex sm:flex-col sm:justify-center">
+        {loading ? (
+          <StatsSkeleton />
+        ) : error ? null : (
+          <>
+            <StatBlock
+              label="Total Revenue"
+              value={fmtFull(data!.totalRevenue)}
+              sub={`↗ +${data!.totalChange}% from last week`}
+              subColor="text-green-500"
             />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#9ca3af', fontSize: 12 }} 
-              tickFormatter={(value) => `₦${value}`}
+            <StatBlock
+              label="Average Daily"
+              value={fmtFull(data!.averageDaily)}
+              sub={`↗ +${data!.averageChange}% from last week`}
+              subColor="text-green-500"
             />
-            <Tooltip 
-              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            <StatBlock
+              label="Highest Day"
+              value={stats!.highDay}
+              sub={fmtFull(stats!.highVal)}
+              subColor="text-[#3bb6e0]"
+              large
             />
-            <Area 
-              type="monotone" 
-              dataKey="sales" 
-              stroke="#3b82f6" 
-              strokeWidth={3}
-              fillOpacity={1} 
-              fill="url(#colorSales)" 
+            <StatBlock
+              label="Lowest Day"
+              value={stats!.lowDay}
+              sub={fmtFull(stats!.lowVal)}
+              subColor="text-amber-500"
+              large
+              last
             />
-          </AreaChart>
-        </ResponsiveContainer>
+          </>
+        )}
       </div>
+
     </div>
   );
 };

@@ -13,8 +13,7 @@ import {
 } from 'lucide-react';
 import StatCard, { StatCardSkeleton, type StatCardProps } from '../components/StatCard';
 import QuickActions from '../components/QuickActions';
-import RecentBookings from '../components/RecentBookings';
-import LiveStatusList from '../components/LiveStatusList';
+import ActiveTrips from '../components/ActiveTrips';
 import SalesOverviewChart from '../components/SalesOverviewChart';
 
 // ── 🔌 MOCK API — swap fetchDashboardStats() body when backend is ready ──────
@@ -236,28 +235,12 @@ const AdminDashboard = () => {
       {/* ── Quick Actions ── */}
       <QuickActions />
 
-      {/* ── Main Content Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Charts & Tables */}
-        <div className="lg:col-span-2 space-y-8">
-          <SalesOverviewChart />
-          <RecentBookings />
-        </div>
+      {/* ── Active Trips ── */}
+      <ActiveTrips />
 
-        {/* Right: Status & Extras */}
-        <div className="space-y-8">
-          <LiveStatusList />
-
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-6 text-white shadow-lg">
-            <h3 className="font-bold text-xl mb-2">Pro Tips</h3>
-            <p className="text-blue-100 text-sm mb-4">
-              Review daily bus schedules to optimize route performance and reduce delays.
-            </p>
-            <button className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              View Analytics
-            </button>
-          </div>
-        </div>
+      {/* ── Main Content ── */}
+      <div className="w-full">
+        <SalesOverviewChart />
       </div>
 
     </div>

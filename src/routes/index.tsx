@@ -14,7 +14,7 @@ import BusStatusPage from '../modules/ticketer/views/BusStatusPage';
 import PassengerList from '../modules/ticketer/views/PassengerList';
 
 // Admin Module
-import { AdminLayout, AdminDashboard } from '../modules/admin/AdminModule';
+import { AdminLayout, AdminDashboard, CreateTrip } from '../modules/admin/AdminModule';
 
 const OverviewPage = () => (
   <div className="p-6">
@@ -103,6 +103,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <AdminDashboard />,
+      },
+      {
+        path: 'trips/create',
+        element: <CreateTrip />,
       },
     ],
   },

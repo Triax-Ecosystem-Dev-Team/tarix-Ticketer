@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Search, Bell, ChevronDown, Settings, Menu } from 'lucide-react';
+import SettingsDropdown from './SettingsDropdown';
+import NotificationsDropdown from './NotificationsDropdown';
 
 interface AdminHeaderProps {
   onMenuToggle: () => void;
@@ -7,6 +9,8 @@ interface AdminHeaderProps {
 
 const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   return (
     <header className="h-16 sm:h-20 bg-white flex items-center justify-between px-4 sm:px-6 lg:px-8
@@ -47,18 +51,30 @@ const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
       {/* Right Actions */}
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Notifications */}
-        <button className="relative p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors">
-          <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="absolute top-1 right-1 w-4 h-4 bg-[#EF4444] text-white text-[10px]
-                           font-bold flex items-center justify-center rounded-full border border-white">
-            3
-          </span>
-        </button>
+        <div className="relative">
+          <button 
+            onClick={() => setIsNotificationsOpen(true)}
+            className="relative p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
+          >
+            <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="absolute top-1 right-1 w-4 h-4 bg-[#EF4444] text-white text-[10px]
+                             font-bold flex items-center justify-center rounded-full border border-white">
+              3
+            </span>
+          </button>
+          <NotificationsDropdown isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
+        </div>
         
-        {/* Settings — hidden on mobile */}
-        <button className="hidden sm:block p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors">
-          <Settings className="w-5 h-5" />
-        </button>
+        {/* Settings */}
+        <div className="relative hidden sm:block">
+          <button 
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+          <SettingsDropdown isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+        </div>
         
         {/* User Profile */}
         <div className="relative">
