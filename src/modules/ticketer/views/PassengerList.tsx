@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Download, User } from 'lucide-react';
+import { ArrowLeft, Search, Download } from 'lucide-react';
 import { busStatusData } from '../data/busStatusData';
 import logoWhite from '../../../assets/images/logo-white.webp';
 import { Passenger } from '../types';

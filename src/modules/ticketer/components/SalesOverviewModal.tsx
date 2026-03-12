@@ -12,24 +12,24 @@ const SalesOverviewModal: React.FC<SalesOverviewModalProps> = ({ isOpen, onClose
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div 
-        className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative"
+        className="bg-white rounded-2xl w-full max-w-full sm:max-w-md max-h-[90vh] overflow-y-auto relative"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-2">
+        <div className="flex items-center justify-between p-4 sm:p-6 pb-2">
           <h2 className="text-xl font-bold text-text-dark">Sales Overview</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
-        <div className="p-6 pt-2 space-y-6">
+        <div className="p-4 sm:p-6 pt-2 space-y-6">
            <hr className="border-gray-100" />
 
            {/* Total Tickets Card */}
-           <div className="bg-[#0095FF] rounded-xl p-6 text-white shadow-lg shadow-blue-100">
+           <div className="bg-[#0095FF] rounded-xl p-4 sm:p-6 text-white shadow-lg shadow-blue-100">
              <p className="text-sm font-medium opacity-90 mb-1">Total Tickets Sold</p>
-             <p className="text-4xl font-bold">100</p>
+             <p className="text-4xl sm:text-[2.5rem] font-bold">100</p>
            </div>
 
            {/* Breakdown */}
@@ -71,7 +71,7 @@ const SalesOverviewModal: React.FC<SalesOverviewModalProps> = ({ isOpen, onClose
            {/* Total Revenue */}
            <div className="flex justify-between items-center pt-2 pb-2">
              <p className="font-bold text-text-gray">Total Revenue</p>
-             <p className="text-2xl font-bold text-text-dark">₦850,000</p>
+             <p className="text-2xl sm:text-3xl font-bold text-text-dark">₦850,000</p>
            </div>
 
         </div>

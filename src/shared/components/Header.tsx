@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, Wallet } from 'lucide-react';
+import { Zap, Wallet, Menu, X } from 'lucide-react';
 import { useBookingStore } from '../../modules/ticketer/store/useBookingStore';
 import CashbackModal from '../../modules/ticketer/components/modals/CashbackModal';
 import SalesOverviewModal from '../../modules/ticketer/components/SalesOverviewModal';
@@ -9,7 +9,19 @@ import logo from '../../assets/images/logo.webp';
 const Header: React.FC = () => {
   const [isCashbackModalOpen, setIsCashbackModalOpen] = React.useState(false);
   const [isSalesOverviewOpen, setIsSalesOverviewOpen] = React.useState(false);
+  const [isNavOpen, setIsNavOpen] = React.useState(false);
   const user = useBookingStore((state) => state.user);
+
+  // close mobile nav when viewport grows
+  React.useEffect(() => {
+    const handler = () => {
+      if (window.innerWidth >= 768 && isNavOpen) {
+        setIsNavOpen(false);
+      }
+    };
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [isNavOpen]);
 
   // Format wallet balance
   const formattedBalance = user
@@ -23,9 +35,18 @@ const Header: React.FC = () => {
   return (
     <header className="w-full">
       {/* Top Navigation Bar */}
-      <nav className="bg-white border-b border-border-gray h-[50px] flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm">
+      <nav className="bg-white border-b border-border-gray h-[50px] flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm relative">
         {/* Left Section */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 md:gap-8">
+          {/* Mobile menu toggle */}
+          <button
+            className="md:hidden p-2 text-text-gray hover:text-primary-blue transition-colors"
+            onClick={() => setIsNavOpen((prev) => !prev)}
+            aria-label={isNavOpen ? 'Close navigation' : 'Open navigation'}
+          >
+            {isNavOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+
           {/* Logo */}
           <Link to="/" className="flex items-center cursor-pointer group">
             <img 
@@ -80,6 +101,34 @@ const Header: React.FC = () => {
           </button>
         </div>
       </nav>
+
+      {/* Mobile navigation menu */}
+      {isNavOpen && (
+        <div className="md:hidden bg-white border-b border-border-gray shadow-sm absolute top-[50px] left-0 w-full z-40">
+          <ul className="flex flex-col">
+            <li>
+              <Link
+                to="/bus-status"
+                onClick={() => setIsNavOpen(false)}
+                className="block px-6 py-3 text-text-gray text-sm font-medium hover:bg-gray-100"
+              >
+                Bus Status
+              </Link>
+            </li>
+            <li>
+              <button
+                onClick={() => {
+                  setIsSalesOverviewOpen(true);
+                  setIsNavOpen(false);
+                }}
+                className="w-full text-left px-6 py-3 text-text-gray text-sm font-medium hover:bg-gray-100"
+              >
+                Overview
+              </button>
+            </li>
+          </ul>
+        </div>
+      )}
 
       {/* User Profile Banner */}
       <div className="relative bg-gradient-to-r from-brand-blue-dark to-brand-blue-light py-8 px-6 text-white text-center overflow-hidden">

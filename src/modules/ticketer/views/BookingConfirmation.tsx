@@ -56,8 +56,8 @@ const BookingConfirmation: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 flex items-start justify-center">
-        <div className="w-full max-w-2xl bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+      <main className="flex-1 p-4 sm:p-6 flex items-start justify-center">
+        <div className="w-full max-w-2xl bg-white rounded-2xl p-4 sm:p-8 shadow-sm border border-gray-200">
             <h2 className="text-2xl font-bold text-text-dark mb-1">
               Review Your Booking
             </h2>
@@ -68,7 +68,7 @@ const BookingConfirmation: React.FC = () => {
             {/* Trip Details */}
             <div className="mb-8">
               <h3 className="text-base font-bold text-text-dark mb-4">Trip Details</h3>
-              <div className="grid grid-cols-2 gap-y-6 gap-x-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 sm:gap-y-6 gap-x-4 sm:gap-x-8">
                 <div>
                   <p className="text-xs text-text-gray mb-1">From</p>
                   <p className="font-bold text-text-dark">Lagos</p>
@@ -93,14 +93,14 @@ const BookingConfirmation: React.FC = () => {
             {/* Passenger Details */}
             <div className="mb-8">
               <h3 className="text-base font-bold text-text-dark mb-4">Passenger Details</h3>
-              <div className="grid grid-cols-2 gap-y-6 gap-x-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 sm:gap-y-6 gap-x-4 sm:gap-x-8">
                 <div>
                   <p className="text-xs text-text-gray mb-1">Name</p>
                   <p className="font-bold text-text-dark">Mr. Johnson Adebayo</p>
                 </div>
                 <div>
                   <p className="text-xs text-text-gray mb-1">Email</p>
-                  <p className="text-sm text-text-dark">johnson.adebayo@example.com</p>
+                  <p className="text-sm text-text-dark break-all">johnson.adebayo@example.com</p>
                 </div>
                 <div>
                   <p className="text-xs text-text-gray mb-1">Phone</p>
@@ -118,9 +118,11 @@ const BookingConfirmation: React.FC = () => {
             {/* Seat & Bus */}
             <div className="mb-8">
               <h3 className="text-base font-bold text-text-dark mb-4">Seat & Bus</h3>
-              <div>
-                <p className="text-xs text-text-gray mb-1">Seat</p>
-                <p className="font-bold text-text-dark">A1</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 sm:gap-y-6 gap-x-4 sm:gap-x-8">
+                <div>
+                  <p className="text-xs text-text-gray mb-1">Seat</p>
+                  <p className="font-bold text-text-dark">A1</p>
+                </div>
               </div>
             </div>
 
@@ -156,17 +158,17 @@ const BookingConfirmation: React.FC = () => {
             </div>
 
 
-             <div className="space-y-4 pt-4">
+             <div className="space-y-3 pt-4">
               <button
                 onClick={handleConfirmPay}
-                className="w-full py-4 bg-[#00A97C] text-white rounded-xl font-bold text-base hover:bg-[#008F68] active:scale-[0.98] transition-all shadow-md"
+                className="w-full py-3 sm:py-4 bg-[#00A97C] text-white rounded-xl font-bold text-base hover:bg-[#008F68] active:scale-[0.98] transition-all shadow-md"
               >
                 Confirm & Pay
               </button>
               
               <button
                 onClick={handleBack}
-                className="w-full py-4 bg-white border-2 border-primary-blue text-primary-blue rounded-xl font-bold text-base hover:bg-blue-50 active:scale-[0.98] transition-all"
+                className="w-full py-3 sm:py-4 bg-white border-2 border-primary-blue text-primary-blue rounded-xl font-bold text-base hover:bg-blue-50 active:scale-[0.98] transition-all"
               >
                 Back
               </button>

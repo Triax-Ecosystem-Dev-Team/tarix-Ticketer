@@ -153,8 +153,8 @@ const BusStatusPage: React.FC = () => {
         )}
       </div>
 
-      {/* Fixed Live Updates - Bottom Right */}
-      <div className="fixed bottom-8 right-8 z-50">
+      {/* Fixed Live Updates - bottom center on mobile, bottom-right on larger screens */}
+      <div className="fixed inset-x-0 bottom-4 flex justify-center sm:justify-end sm:bottom-8 sm:right-8 z-50 px-4">
         <LiveUpdates />
       </div>
     </div>
