@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -8,11 +9,11 @@ async function fetchActiveTrips() {
   return {
     total: 13,
     trips: [
-      { id: 'TRP-001245', from: 'Lagos',  to: 'Ibadan',  driver: 'Ahmed Hassan',   initials: 'AH', bus: 'BUS-045', passengers: 42, capacity: 50, eta: '2:30 PM' },
-      { id: 'TRP-001246', from: 'Lagos',  to: 'Benin',   driver: 'Chioma Okafor',  initials: 'CO', bus: 'BUS-032', passengers: 48, capacity: 50, eta: '3:15 PM' },
-      { id: 'TRP-001247', from: 'Ibadan', to: 'Oshogbo', driver: 'Emeka Nwosu',    initials: 'EN', bus: 'BUS-018', passengers: 35, capacity: 50, eta: '1:45 PM' },
-      { id: 'TRP-001248', from: 'Lagos',  to: 'Abuja',   driver: 'Fatima Ibrahim', initials: 'FI', bus: 'BUS-027', passengers: 50, capacity: 50, eta: '5:00 PM' },
-      { id: 'TRP-001249', from: 'Benin',  to: 'Lagos',   driver: 'Chukwudi Eze',   initials: 'CE', bus: 'BUS-013', passengers: 38, capacity: 50, eta: '4:20 PM' },
+      { id: 'TRP-001245', from: 'Lagos',  to: 'Ibadan',  driver: 'Ahmed Hassan',   initials: 'AH', bus: 'BUS-045', passengers: 42, capacity: 50, eta: '2:30 PM', status: 'En Route' },
+      { id: 'TRP-001246', from: 'Lagos',  to: 'Benin',   driver: 'Chioma Okafor',  initials: 'CO', bus: 'BUS-032', passengers: 48, capacity: 50, eta: '3:15 PM', status: 'En Route' },
+      { id: 'TRP-001247', from: 'Ibadan', to: 'Oshogbo', driver: 'Emeka Nwosu',    initials: 'EN', bus: 'BUS-018', passengers: 35, capacity: 50, eta: '1:45 PM', status: 'Completed' },
+      { id: 'TRP-001248', from: 'Lagos',  to: 'Abuja',   driver: 'Fatima Ibrahim', initials: 'FI', bus: 'BUS-027', passengers: 50, capacity: 50, eta: '5:00 PM', status: 'En Route' },
+      { id: 'TRP-001249', from: 'Benin',  to: 'Lagos',   driver: 'Chukwudi Eze',   initials: 'CE', bus: 'BUS-013', passengers: 38, capacity: 50, eta: '4:20 PM', status: 'En Route' },
     ],
   };
 }
@@ -160,9 +161,12 @@ const ActiveTrips = () => {
               >
                 {/* Trip ID */}
                 <td className="px-4 py-3.5 overflow-hidden">
-                  <span className="text-[#3bb6e0] font-semibold text-[12.5px] cursor-pointer hover:underline truncate block">
+                  <Link 
+                    to={trip.status === 'Completed' ? `/admin/trips/report/${trip.id}` : `/admin/trips/${trip.id}`}
+                    className="text-[#3bb6e0] font-semibold text-[12.5px] cursor-pointer hover:underline truncate block"
+                  >
                     {trip.id}
-                  </span>
+                  </Link>
                 </td>
 
                 {/* Route */}

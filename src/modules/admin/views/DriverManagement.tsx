@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Users, CheckCircle2, Navigation, AlertCircle, 
   Search, LayoutGrid, List, Plus, Phone, Mail, MoreVertical, X,
@@ -144,12 +145,13 @@ export default function DriverManagement() {
           </div>
 
           {/* Add Driver Button */}
-          <button 
+          <Link 
+            to="/admin/team/add/driver"
             className="flex items-center justify-center gap-2 bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-5 py-2.5 rounded-xl font-semibold text-[13.5px] transition-colors shadow-sm whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             Add New Driver
-          </button>
+          </Link>
         </div>
       </div>
 

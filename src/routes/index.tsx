@@ -23,7 +23,15 @@ import {
   DriverManagement,
   RevenueAnalytics,
   ReportsAnalytics,
-  Settings
+  Settings,
+  AddTeamMember,
+  MemberManager,
+  AddTicketer,
+  AddDriver,
+  TripOverview,
+  TripDetails,
+  TripReport,
+  CompletedTrips
 } from '../modules/admin/AdminModule';
 
 const OverviewPage = () => (
@@ -115,6 +123,22 @@ export const router = createBrowserRouter([
         element: <AdminDashboard />,
       },
       {
+        path: 'trips',
+        element: <TripOverview />,
+      },
+      {
+        path: 'trips/:tripId',
+        element: <TripDetails />,
+      },
+      {
+        path: 'trips/report/:tripId',
+        element: <TripReport />,
+      },
+      {
+        path: 'trips/completed',
+        element: <CompletedTrips />,
+      },
+      {
         path: 'trips/create',
         element: <CreateTrip />,
       },
@@ -141,6 +165,22 @@ export const router = createBrowserRouter([
       {
         path: 'reports',
         element: <ReportsAnalytics />,
+      },
+      {
+        path: 'team/add',
+        element: <AddTeamMember />,
+      },
+      {
+        path: 'team/add/ticketer',
+        element: <AddTicketer />,
+      },
+      {
+        path: 'team/add/driver',
+        element: <AddDriver />,
+      },
+      {
+        path: 'team',
+        element: <MemberManager />,
       },
     ],
   },

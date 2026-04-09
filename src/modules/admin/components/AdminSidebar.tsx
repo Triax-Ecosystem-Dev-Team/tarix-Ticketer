@@ -16,6 +16,8 @@ import {
   Ticket,
   BarChart3,
   X,
+  UserPlus,
+  UserCog,
 } from 'lucide-react';
 import clsx from 'clsx';
 import logoWhite from '../../../assets/images/logo-white.webp';
@@ -148,9 +150,10 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           { to: '/admin/buses',   icon: Bus,        label: 'Buses'    },
           { to: '/admin/drivers', icon: Users,       label: 'Drivers'  },
           { to: '/admin/revenue', icon: TrendingUp,  label: 'Revenue'  },
-          { to: '/admin/tokens',  icon: Ticket,      label: 'Tokens'   },
           { to: '/admin/reports', icon: BarChart3,   label: 'Reports'  },
           { to: '/admin/settings',icon: Settings,    label: 'Settings' },
+          { to: '/admin/team/add',icon: UserPlus,    label: 'Add Team Member' },
+          { to: '/admin/team',    icon: UserCog,     label: 'Member Manager' },
         ].map(({ to, icon: Icon, label }) => (
           <Link
             key={to}
