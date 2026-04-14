@@ -1,7 +1,7 @@
 import { 
-  ArrowLeft, CheckCircle, Download, Share2, Printer, 
-  Clock, Bus, Activity, TrendingUp, Users, Banknote,
-  ChevronRight, MapPin, Phone, PieChart as PieChartIcon, 
+  CheckCircle, Download, Share2, Printer, 
+  Clock, Bus, Activity, TrendingUp, Banknote,
+  ChevronRight, MapPin, Phone, 
   Info, ExternalLink, FileDown
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';

@@ -13,7 +13,6 @@ import {
   FileText,
   CheckCircle,
   TrendingUp,
-  Ticket,
   BarChart3,
   X,
   UserPlus,

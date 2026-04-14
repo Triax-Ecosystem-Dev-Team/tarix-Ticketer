@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, Bell, ChevronDown, Settings, Menu } from 'lucide-react';
-import SettingsDropdown from './SettingsDropdown';
 import NotificationsDropdown from './NotificationsDropdown';
+import { Link } from 'react-router-dom';
 
 interface AdminHeaderProps {
   onMenuToggle: () => void;
@@ -9,7 +9,6 @@ interface AdminHeaderProps {
 
 const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   return (
@@ -67,13 +66,12 @@ const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
         
         {/* Settings */}
         <div className="relative hidden sm:block">
-          <button 
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
+          <Link 
+            to="/admin/settings"
+            className="p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors flex items-center justify-center"
           >
             <Settings className="w-5 h-5" />
-          </button>
-          <SettingsDropdown isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+          </Link>
         </div>
         
         {/* User Profile */}
@@ -98,14 +96,20 @@ const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
             <div className="absolute right-0 top-12 mt-2 w-48 bg-white rounded-xl
                             shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-100 py-1 z-50">
               <div className="px-1 py-1">
-                {['Profile', 'Settings', 'Help'].map((item) => (
-                  <button 
-                    key={item}
+                {[
+                  { name: 'Profile', path: '/admin/profile' },
+                  { name: 'Settings', path: '/admin/settings' },
+                  { name: 'Help', path: '/admin/help' }
+                ].map((item) => (
+                  <Link 
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => setIsDropdownOpen(false)}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-600
-                               hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors"
+                               hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors block"
                   >
-                    {item}
-                  </button>
+                    {item.name}
+                  </Link>
                 ))}
               </div>
               <div className="h-px bg-gray-100 my-1 mx-4" />

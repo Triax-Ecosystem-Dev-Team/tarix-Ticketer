@@ -8,8 +8,7 @@ import {
   Clock,
   ChevronRight,
   Bus,
-  ArrowRight,
-  MoreVertical
+  ArrowRight
 } from 'lucide-react';
 import clsx from 'clsx';
 

@@ -5,17 +5,13 @@ import {
   ArrowRight,
   MapPin, 
   Bus, 
-  User, 
   Search, 
   Printer,
   ChevronRight,
-  Clock,
-  Ticket,
   Edit3,
   XCircle,
   Eye,
-  RefreshCcw,
-  Phone
+  RefreshCcw
 } from 'lucide-react';
 import clsx from 'clsx';
 

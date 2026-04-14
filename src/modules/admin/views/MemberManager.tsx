@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Users, Ticket, Bus, UserCheck, 
   Search, MoreVertical, Mail, Phone, 
   CreditCard, MapPin, BusFront, Calendar,
-  Clock, Shield, Eye, Edit, Trash2,
-  X, AlertTriangle, UserPlus
+  Clock, Eye, Edit, Trash2,
+  X, AlertTriangle
 } from 'lucide-react';
 import clsx from 'clsx';
 
