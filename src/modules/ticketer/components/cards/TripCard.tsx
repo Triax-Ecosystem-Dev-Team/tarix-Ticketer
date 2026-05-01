@@ -1,15 +1,26 @@
 import React from 'react';
 import { Users, Clock, Calendar, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Trip } from '../../types';
 import { useDateFormat } from '../../../../shared/utils/useDateFormat';
+import { useBookingStore } from '../../store/useBookingStore';
 
 interface TripCardProps {
   trip: Trip;
-  onSelect: (trip: Trip) => void;
 }
 
-const TripCard: React.FC<TripCardProps> = ({ trip, onSelect }) => {
+const TripCard: React.FC<TripCardProps> = ({ trip }) => {
   const { formatDate } = useDateFormat();
+  const navigate = useNavigate();
+  const { resetBookingFlow, setSelectedTrip } = useBookingStore();
+
+  const handleSelect = () => {
+    // Principal Architect Note: Adhering to "Tell, Don't Ask" principle.
+    // We command the store to reset the flow state before initializing the new trip.
+    resetBookingFlow();
+    setSelectedTrip(trip);
+    navigate('/booking/identify');
+  };
 
   return (
     <div className="bg-white rounded-xl border border-border-gray shadow-sm hover:shadow-md hover:border-primary-blue hover:border-2 hover:scale-[1.01] transition-all duration-300">
@@ -77,7 +88,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect }) => {
               </span>
             </div>
             <button
-              onClick={() => onSelect(trip)}
+              onClick={handleSelect}
               className="px-6 py-2.5 bg-gradient-to-r from-brand-blue-dark to-brand-blue-light text-white text-sm font-semibold rounded-lg hover:shadow-lg active:scale-[0.98] transition-all"
             >
               Select
@@ -145,7 +156,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect }) => {
               <span className="text-xs text-text-gray">available</span>
             </div>
             <button
-              onClick={() => onSelect(trip)}
+              onClick={handleSelect}
               className="px-8 py-2.5 bg-gradient-to-r from-brand-blue-dark to-brand-blue-light text-white text-sm font-bold rounded-xl hover:shadow-lg active:scale-[0.98] transition-all"
             >
               Select Trip
@@ -226,7 +237,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect }) => {
             </div>
 
             <button
-              onClick={() => onSelect(trip)}
+              onClick={handleSelect}
               className="w-full px-8 py-3 bg-gradient-to-r from-[#0062E6] to-[#0095FF] text-white text-sm font-bold rounded-xl hover:shadow-lg active:scale-[0.98] transition-all"
             >
               Select

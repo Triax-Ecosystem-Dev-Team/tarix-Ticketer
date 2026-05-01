@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Zap, Wallet, Menu, X } from 'lucide-react';
-import { useBookingStore } from '../../modules/ticketer/store/useBookingStore';
+import { useAuthStore } from '../../modules/auth/store/useAuthStore';
 import CashbackModal from '../../modules/ticketer/components/modals/CashbackModal';
 import SalesOverviewModal from '../../modules/ticketer/components/SalesOverviewModal';
 import logo from '../../assets/images/logo.webp';
@@ -10,7 +10,7 @@ const Header: React.FC = () => {
   const [isCashbackModalOpen, setIsCashbackModalOpen] = React.useState(false);
   const [isSalesOverviewOpen, setIsSalesOverviewOpen] = React.useState(false);
   const [isNavOpen, setIsNavOpen] = React.useState(false);
-  const user = useBookingStore((state) => state.user);
+  const user = useAuthStore((state) => state.user);
 
   // close mobile nav when viewport grows
   React.useEffect(() => {
@@ -23,9 +23,10 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('resize', handler);
   }, [isNavOpen]);
 
-  // Format wallet balance
+  // Format wallet balance (mocked or from backend if available)
+  const walletBalance = user && 'walletBalance' in user ? (user as any).walletBalance : 1000000;
   const formattedBalance = user
-    ? `₦${user.walletBalance.toLocaleString('en-NG', {
+    ? `₦${walletBalance.toLocaleString('en-NG', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`
@@ -58,6 +59,15 @@ const Header: React.FC = () => {
 
           {/* Navigation Links */}
           <ul className="hidden md:flex items-center gap-7">
+            <li>
+              <Link
+                to="/find-ticket"
+                className="text-text-gray text-sm font-medium hover:text-primary-blue transition-colors relative group"
+              >
+                Find Ticket
+                <span className="absolute -bottom-4 left-0 w-0 h-0.5 bg-primary-blue transition-all duration-300 group-hover:w-full" />
+              </Link>
+            </li>
             <li>
               <Link
                 to="/bus-status"
@@ -106,6 +116,15 @@ const Header: React.FC = () => {
       {isNavOpen && (
         <div className="md:hidden bg-white border-b border-border-gray shadow-sm absolute top-[50px] left-0 w-full z-40">
           <ul className="flex flex-col">
+            <li>
+              <Link
+                to="/find-ticket"
+                onClick={() => setIsNavOpen(false)}
+                className="block px-6 py-3 text-text-gray text-sm font-medium hover:bg-gray-100"
+              >
+                Find Ticket
+              </Link>
+            </li>
             <li>
               <Link
                 to="/bus-status"

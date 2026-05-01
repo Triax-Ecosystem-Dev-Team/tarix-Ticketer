@@ -1,8 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useBookingStore } from '../store/useBookingStore';
+import { Plus, Minus, Info } from 'lucide-react';
 
 const ExtraBaggage: React.FC = () => {
   const navigate = useNavigate();
+  const { 
+    extraBaggageCount, incrementBaggage, decrementBaggage,
+    extraBaggagePrice, isFetchingBaggagePrice, fetchBaggagePrice,
+    selectedTrip
+  } = useBookingStore();
+
+  useEffect(() => {
+    fetchBaggagePrice();
+  }, [fetchBaggagePrice]);
 
   const handleContinue = () => {
     navigate('/booking/payment');
@@ -11,6 +22,8 @@ const ExtraBaggage: React.FC = () => {
   const handleBack = () => {
     navigate(-1);
   };
+
+  const totalBaggageFee = extraBaggageCount * extraBaggagePrice;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -24,7 +37,7 @@ const ExtraBaggage: React.FC = () => {
             <h1 className="text-xl font-bold text-text-dark">Extra Baggage</h1>
             {/* Keeping the trip info for context */}
             <p className="text-sm text-text-gray">
-              Lagos → Ibadan | Nov 15, 2025 | 2:00 PM
+              {selectedTrip?.departureTerminal} → {selectedTrip?.arrivalTerminal} | {selectedTrip ? new Date(selectedTrip.departureDate).toLocaleDateString() : ''} | {selectedTrip?.departureTime}
             </p>
           </div>
         </div>
@@ -43,61 +56,79 @@ const ExtraBaggage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 flex flex-col items-center justify-center">
-        <div className="max-w-[1000px] w-full space-y-8">
+      <main className="flex-1 p-6 flex flex-col items-center py-12">
+        <div className="max-w-2xl w-full space-y-8">
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Weight Limits Card */}
-            <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-6 text-primary-blue">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 01-2.031.352 5.989 5.989 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" />
-                </svg>
+          {/* Baggage Selector Card */}
+          <div className="bg-white rounded-3xl border border-border-gray shadow-sm p-8 md:p-10">
+            <h2 className="text-2xl font-bold text-text-dark mb-2">Need extra luggage space?</h2>
+            <p className="text-text-gray mb-8">Each passenger is allowed one standard bag. Purchase extra baggage slots below if you have more.</p>
+            
+            <div className="bg-gray-50 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between border border-gray-100">
+              <div className="flex items-center gap-4 mb-6 sm:mb-0">
+                <div className="w-16 h-16 bg-blue-100 text-primary-blue rounded-2xl flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-text-dark">Extra Baggage</h3>
+                  {isFetchingBaggagePrice ? (
+                    <div className="h-5 w-24 bg-blue-100/50 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-sm font-medium text-text-gray">₦{extraBaggagePrice.toLocaleString()} per unit</p>
+                  )}
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-text-dark mb-3">Weight Limits</h3>
-              <p className="text-sm text-text-gray leading-relaxed">
-                Each bag has a maximum weight limit. Exceeding limits may incur additional charges.
-              </p>
+
+              <div className="flex items-center gap-5">
+                <button 
+                  onClick={decrementBaggage}
+                  disabled={extraBaggageCount === 0}
+                  className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-200 text-text-gray hover:border-primary-blue hover:text-primary-blue disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:text-text-gray transition-colors"
+                >
+                  <Minus className="w-5 h-5" />
+                </button>
+                <span className="text-3xl font-black text-text-dark w-8 text-center">{extraBaggageCount}</span>
+                <button 
+                  onClick={incrementBaggage}
+                  className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-primary-blue bg-primary-blue text-white hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            {/* Fragile Items Card */}
-            <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-6 text-primary-blue">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-text-dark mb-3">Fragile Items</h3>
-              <p className="text-sm text-text-gray leading-relaxed">
-                Declare fragile items for proper handling and insurance coverage.
-              </p>
+            <div className="mt-8 pt-8 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-text-gray font-medium">Baggage Subtotal:</span>
+              <span className="text-2xl font-black text-primary-blue">
+                ₦{totalBaggageFee.toLocaleString()}
+              </span>
             </div>
+          </div>
 
-            {/* Refund Policy Card */}
-            <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-               <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-6 text-primary-blue">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-text-dark mb-3">Refund Policy</h3>
-              <p className="text-sm text-text-gray leading-relaxed">
-                Baggage charges are non-refundable unless the trip is cancelled.
+          {/* Info Card */}
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex gap-4">
+            <Info className="w-6 h-6 text-primary-blue flex-shrink-0" />
+            <div>
+              <h4 className="font-bold text-primary-blue mb-1">Important Notice</h4>
+              <p className="text-sm text-blue-900/80 leading-relaxed">
+                Weight limits apply. Fragile items must be declared at the terminal. Baggage fees are non-refundable unless the trip itself is cancelled.
               </p>
             </div>
           </div>
 
-          <div className="space-y-4 pt-8">
+          <div className="space-y-4 pt-4">
             <button
               onClick={handleContinue}
-              className="w-full py-4 bg-[#00A97C] text-white rounded-xl font-bold text-base hover:bg-[#008F68] active:scale-[0.98] transition-all shadow-md"
+              className="w-full py-4 bg-[#00A97C] text-white rounded-xl font-bold text-lg hover:bg-[#008F68] active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
             >
               Continue to Payment
             </button>
             
             <button
               onClick={handleBack}
-              className="w-full py-4 bg-white border-2 border-primary-blue text-primary-blue rounded-xl font-bold text-base hover:bg-blue-50 active:scale-[0.98] transition-all"
+              className="w-full py-4 bg-white border-2 border-primary-blue text-primary-blue rounded-xl font-bold text-lg hover:bg-blue-50 active:scale-[0.98] transition-all"
             >
               Back to Passenger Details
             </button>

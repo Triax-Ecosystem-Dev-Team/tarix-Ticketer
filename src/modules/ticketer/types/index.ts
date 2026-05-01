@@ -9,6 +9,9 @@ export interface Trip {
     arrivalTerminal: string;
     availableSeats: number;
     price: number;
+    bus?: any;
+    busModel?: any;
+    occupiedSeats?: string[];
 }
 
 // Search filter types
@@ -37,4 +40,27 @@ export interface Passenger {
     seatNumber: string;
     phone: string;
     userId: string;
+}
+// Passenger type for manifest
+export interface PassengerProfile extends RegisteredPassenger {}
+// Registered Passenger type (for recurring users)
+export interface RegisteredPassenger {
+    id: string;
+    loginId: string;
+    title: string;
+    surname: string;
+    firstname: string;
+    dateOfBirth: string;
+    occupation: string;
+    state: string;
+    localGovernment: string;
+    nationality: string;
+    address: string;
+    phone: string;
+    officePhone: string;
+    email: string;
+    nextOfKinName: string;
+    nextOfKinPhone: string;
+    nextOfKinAddress: string;
+    nextOfKinRelationship: string;
 }

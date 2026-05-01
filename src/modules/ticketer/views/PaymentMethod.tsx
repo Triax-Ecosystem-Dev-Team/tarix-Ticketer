@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, CreditCard, Building2, CheckCircle2 } from 'lucide-react';
-
-type PaymentMethodType = 'cash' | 'card' | 'transfer';
+import { Wallet, CreditCard, Building2, CheckCircle2, MapPin, Calendar, Users, Briefcase } from 'lucide-react';
+import { useBookingStore } from '../store/useBookingStore';
 
 const PaymentMethod: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodType>('cash');
+  const { 
+    selectedTrip, selectedSeats, registeredPassenger, 
+    extraBaggageCount, user,
+    paymentMethod, setPaymentMethod, getBookingTotals
+  } = useBookingStore();
+
+  const { subtotal, baggageCost, serviceFee, total } = getBookingTotals() as any;
 
   const handleProceed = () => {
-    // Navigate to confirmation with selected method
-    navigate('/booking/confirmation', { state: { paymentMethod: selectedMethod } });
+    // Principal Architect Note: Persisting choice in store, not router state.
+    navigate('/booking/confirmation');
   };
 
   const handleBack = () => {
@@ -47,8 +52,99 @@ const PaymentMethod: React.FC = () => {
       <main className="flex-1 p-6">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8">
           
-          {/* Left: Payment Options */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+          {/* Booking Overview - Order 1 on mobile, Order 2 on desktop */}
+          <div className="order-1 lg:order-2 bg-white rounded-3xl p-8 shadow-sm border border-gray-200 h-fit lg:sticky lg:top-6">
+            <h2 className="text-xl font-bold text-text-dark mb-8 flex items-center gap-2">
+              Booking Overview
+            </h2>
+
+            <div className="space-y-6">
+              {/* Route & Time */}
+              <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="mt-1 bg-primary-blue/10 p-2 rounded-lg">
+                    <MapPin className="w-5 h-5 text-primary-blue" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-text-dark text-base leading-tight">
+                      {selectedTrip?.departureTerminal} → {selectedTrip?.arrivalTerminal}
+                    </p>
+                    <p className="text-sm font-medium text-text-gray mt-1">
+                      {selectedTrip?.busModel?.name || 'Standard Bus'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary-blue/10 p-2 rounded-lg">
+                    <Calendar className="w-5 h-5 text-primary-blue" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-text-dark">
+                      {selectedTrip ? new Date(selectedTrip.departureDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                    </p>
+                    <p className="text-xs font-medium text-text-gray">{selectedTrip?.departureTime}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selection Details */}
+              <div className="space-y-4 px-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-5 h-5 text-text-gray" />
+                    <span className="text-sm font-medium text-text-gray">Seats</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {selectedSeats.map(seat => (
+                      <span key={seat} className="px-2 py-0.5 bg-blue-100 text-primary-blue text-xs font-bold rounded-md">
+                        {seat}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Briefcase className="w-5 h-5 text-text-gray" />
+                    <span className="text-sm font-medium text-text-gray">Extra Baggage</span>
+                  </div>
+                  <span className="text-sm font-bold text-text-dark">{extraBaggageCount} unit(s)</span>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <p className="text-xs font-bold text-text-gray uppercase tracking-wider mb-3">Passenger Information</p>
+                  <p className="text-base font-bold text-text-dark">
+                    {registeredPassenger?.title} {registeredPassenger?.firstname} {registeredPassenger?.surname}
+                  </p>
+                  <p className="text-sm text-text-gray mt-0.5">{registeredPassenger?.phone}</p>
+                </div>
+              </div>
+
+              {/* Pricing */}
+              <div className="bg-gray-50/50 rounded-2xl p-6 border border-gray-100 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-gray font-medium">Subtotal ({selectedSeats.length} seats)</span>
+                  <span className="text-text-dark font-bold">₦{subtotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-gray font-medium">Baggage Fee</span>
+                  <span className="text-text-dark font-bold">₦{baggageCost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-gray font-medium">Service Fee</span>
+                  <span className="text-text-dark font-bold">₦{serviceFee.toLocaleString()}</span>
+                </div>
+                <div className="pt-4 border-t border-gray-200 flex justify-between items-end">
+                  <span className="text-base font-bold text-text-dark">Grand Total</span>
+                  <span className="text-3xl font-black text-primary-blue">₦{total.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Options - Order 2 on mobile, Order 1 on desktop */}
+          <div className="order-2 lg:order-1 bg-white rounded-3xl p-8 shadow-sm border border-gray-200 h-fit">
             <h2 className="text-xl font-bold text-text-dark mb-6">
               Select Payment Method
             </h2>
@@ -56,43 +152,43 @@ const PaymentMethod: React.FC = () => {
             <div className="space-y-4">
               {/* Cash */}
               <button
-                onClick={() => setSelectedMethod('cash')}
+                onClick={() => setPaymentMethod('cash')}
                 className={`w-full p-6 rounded-xl border-2 flex items-center justify-between transition-all group ${
-                  selectedMethod === 'cash'
+                  paymentMethod === 'cash'
                     ? 'border-primary-blue bg-blue-50/10'
                     : 'border-gray-100 hover:border-gray-200'
                 }`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                     selectedMethod === 'cash' ? 'bg-primary-blue text-white' : 'bg-gray-100 text-text-gray'
+                     paymentMethod === 'cash' ? 'bg-primary-blue text-white' : 'bg-gray-100 text-text-gray'
                   }`}>
                     <Wallet className="w-6 h-6" />
                   </div>
                   <div className="text-left">
                     <p className="font-bold text-text-dark text-lg">Cash</p>
                     <p className="text-sm font-medium text-[#00C853]">
-                      Balance: ₦1,000,000.00
+                      Balance: ₦{user?.walletBalance.toLocaleString()}
                     </p>
                   </div>
                 </div>
-                {selectedMethod === 'cash' && (
+                {paymentMethod === 'cash' && (
                   <CheckCircle2 className="w-6 h-6 text-primary-blue" />
                 )}
               </button>
 
               {/* Card Payment */}
               <button
-                onClick={() => setSelectedMethod('card')}
+                onClick={() => setPaymentMethod('card')}
                 className={`w-full p-6 rounded-xl border-2 flex items-center justify-between transition-all group ${
-                  selectedMethod === 'card'
+                  paymentMethod === 'card'
                     ? 'border-primary-blue bg-blue-50/10'
                     : 'border-gray-100 hover:border-gray-200'
                 }`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                     selectedMethod === 'card' ? 'bg-primary-blue text-white' : 'bg-gray-100 text-text-gray'
+                     paymentMethod === 'card' ? 'bg-primary-blue text-white' : 'bg-gray-100 text-text-gray'
                   }`}>
                     <CreditCard className="w-6 h-6" />
                   </div>
@@ -103,23 +199,23 @@ const PaymentMethod: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                {selectedMethod === 'card' && (
+                {paymentMethod === 'card' && (
                   <CheckCircle2 className="w-6 h-6 text-primary-blue" />
                 )}
               </button>
 
               {/* Bank Transfer */}
               <button
-                onClick={() => setSelectedMethod('transfer')}
+                onClick={() => setPaymentMethod('transfer')}
                 className={`w-full p-6 rounded-xl border-2 flex items-center justify-between transition-all group ${
-                  selectedMethod === 'transfer'
+                  paymentMethod === 'transfer'
                     ? 'border-primary-blue bg-blue-50/10'
                     : 'border-gray-100 hover:border-gray-200'
                 }`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                     selectedMethod === 'transfer' ? 'bg-primary-blue text-white' : 'bg-gray-100 text-text-gray'
+                     paymentMethod === 'transfer' ? 'bg-primary-blue text-white' : 'bg-gray-100 text-text-gray'
                   }`}>
                     <Building2 className="w-6 h-6" />
                   </div>
@@ -130,7 +226,7 @@ const PaymentMethod: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                {selectedMethod === 'transfer' && (
+                {paymentMethod === 'transfer' && (
                   <CheckCircle2 className="w-6 h-6 text-primary-blue" />
                 )}
               </button>
@@ -152,58 +248,6 @@ const PaymentMethod: React.FC = () => {
               </button>
             </div>
           </div>
-
-          {/* Right: Order Summary */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 h-fit">
-            <h2 className="text-xl font-bold text-text-dark mb-6">
-              Order Summary
-            </h2>
-
-            <div className="space-y-6">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-bold text-text-dark">Lagos → Ibadan</p>
-                </div>
-                <p className="text-sm text-text-gray">
-                  Nov 15, 2025 at 2:00 PM
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-gray-200 space-y-2">
-                <p className="text-sm text-text-gray">
-                  Seat: <span className="font-medium text-text-dark">A1</span>
-                </p>
-                <p className="text-sm text-text-gray">
-                  Passenger: <span className="font-medium text-text-dark">Mr. Johnson Adebayo</span>
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-gray-200 space-y-3">
-                <div className="flex justify-between">
-                  <p className="text-sm font-medium text-text-gray">Subtotal</p>
-                  <p className="text-sm font-bold text-text-dark">₦19,000</p>
-                </div>
-                <div className="flex justify-between">
-                  <p className="text-sm font-medium text-text-gray">Service Fee</p>
-                  <p className="text-sm font-medium text-text-gray">₦500</p>
-                </div>
-                <div className="flex justify-between">
-                  <p className="text-sm font-medium text-text-gray">Baggage Cost</p>
-                  <p className="text-sm font-medium text-text-gray">₦0</p>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-200">
-                <div className="flex justify-between items-end">
-                  <p className="text-lg font-bold text-text-dark">Total</p>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-text-dark">₦19,500</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
       </main>
     </div>

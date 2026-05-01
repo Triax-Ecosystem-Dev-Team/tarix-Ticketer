@@ -1,5 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
+import ProtectedRoute from '../shared/components/ProtectedRoute';
+import LoginPage from '../modules/auth/views/LoginPage';
 import TicketerDashboard from '../modules/ticketer/views/TicketerDashboard';
 import UserIdentification from '../modules/ticketer/views/UserIdentification';
 import PassengerDetails from '../modules/ticketer/views/PassengerDetails';
@@ -8,6 +10,7 @@ import ExtraBaggage from '../modules/ticketer/views/ExtraBaggage';
 import PaymentMethod from '../modules/ticketer/views/PaymentMethod';
 import BookingConfirmation from '../modules/ticketer/views/BookingConfirmation';
 import BookingSuccess from '../modules/ticketer/views/BookingSuccess';
+import FindTicket from '../modules/ticketer/views/FindTicket';
 
 // Placeholder components
 import BusStatusPage from '../modules/ticketer/views/BusStatusPage';
@@ -57,9 +60,17 @@ const NotFoundPage = () => (
 
 export const router = createBrowserRouter([
   {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
     path: '/',
-    element: <App />,
+    element: <ProtectedRoute allowedRoles={['Ticketer', 'Passenger', 'Admin']} />,
     children: [
+      {
+        path: '',
+        element: <App />,
+        children: [
       {
         index: true,
         element: <TicketerDashboard />,
@@ -97,6 +108,10 @@ export const router = createBrowserRouter([
         element: <BusStatusPage />,
       },
       {
+        path: 'find-ticket',
+        element: <FindTicket />,
+      },
+      {
         path: 'bus-status/passengers/:busId',
         element: <PassengerList />,
       },
@@ -112,12 +127,18 @@ export const router = createBrowserRouter([
         path: '*',
         element: <NotFoundPage />,
       },
+        ],
+      },
     ],
   },
   {
     path: '/admin',
-    element: <AdminLayout />,
+    element: <ProtectedRoute allowedRoles={['Admin']} />,
     children: [
+      {
+        path: '',
+        element: <AdminLayout />,
+        children: [
       {
         index: true,
         element: <AdminDashboard />,
@@ -181,6 +202,8 @@ export const router = createBrowserRouter([
       {
         path: 'team',
         element: <MemberManager />,
+      },
+        ],
       },
     ],
   },

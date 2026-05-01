@@ -1,39 +1,32 @@
 import React, { useState } from 'react';
-import { User, ArrowRight, ArrowLeft } from 'lucide-react';
+import { User, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
+import { useBookingStore } from '../store/useBookingStore';
 import LoadingScreen from '../../../shared/components/LoadingScreen';
 
 const UserIdentification: React.FC = () => {
   const navigate = useNavigate();
+  const { fetchPassengerByLoginId, error, isLoading } = useBookingStore();
   const [userId, setUserId] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleContinue = (e: React.FormEvent) => {
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (userId.trim()) {
-      setIsLoading(true);
-      // Simulate loading for next step
-      setTimeout(() => {
-        console.log('Proceeding with User ID:', userId);
-        // Navigate to seat selection directly for existing users
+      const passenger = await fetchPassengerByLoginId(userId);
+      if (passenger) {
+        // Automatically populate booking with this passenger's info
+        // (Assuming 1 passenger for now, or the first one in the manifest)
         navigate('/booking/select-seat');
-      }, 1500);
+      }
     }
   };
 
   const handleNewUser = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-        navigate('/booking/passenger-details');
-    }, 1500);
+    navigate('/booking/passenger-details');
   };
 
   const handleBack = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      navigate(-1);
-    }, 1500);
+    navigate(-1);
   };
 
   if (isLoading) {
@@ -56,6 +49,13 @@ const UserIdentification: React.FC = () => {
             Please enter your User ID to proceed with your booking
           </p>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm animate-shake">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p>{error}</p>
+          </div>
+        )}
 
         <form onSubmit={handleContinue} className="space-y-6">
           <div className="space-y-2">

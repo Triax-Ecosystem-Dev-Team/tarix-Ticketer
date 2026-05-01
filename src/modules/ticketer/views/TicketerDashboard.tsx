@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchForm from '../components/forms/SearchForm';
 import TripCard from '../components/cards/TripCard';
@@ -7,88 +7,25 @@ import MobileSearchButton from '../components/forms/MobileSearchButton';
 import LoadingScreen from '../../../shared/components/LoadingScreen';
 import { Trip } from '../types';
 import Header from '../../../shared/components/Header';
+import { useBookingStore } from '../store/useBookingStore';
 
-// Mock data for available trips
-const mockTrips: Trip[] = [
-  {
-    id: '1',
-    departureDate: new Date('2025-11-11'),
-    departureTime: '7:30 AM',
-    departureTerminal: 'Edo, Benin (HQ)',
-    arrivalTerminal: 'Lagos, Iyana-Ipaja',
-    availableSeats: 13,
-    price: 19000,
-  },
-  {
-    id: '2',
-    departureDate: new Date('2025-11-11'),
-    departureTime: '9:00 AM',
-    departureTerminal: 'Edo, Benin (HQ)',
-    arrivalTerminal: 'Lagos, Iyana-Ipaja',
-    availableSeats: 8,
-    price: 25000,
-  },
-  {
-    id: '3',
-    departureDate: new Date('2025-11-11'),
-    departureTime: '11:30 AM',
-    departureTerminal: 'Edo, Benin (HQ)',
-    arrivalTerminal: 'Lagos, Iyana-Ipaja',
-    availableSeats: 15,
-    price: 17500,
-  },
-  {
-    id: '4',
-    departureDate: new Date('2025-11-11'),
-    departureTime: '2:00 PM',
-    departureTerminal: 'Edo, Benin (HQ)',
-    arrivalTerminal: 'Lagos, Iyana-Ipaja',
-    availableSeats: 10,
-    price: 21000,
-  },
-  {
-    id: '5',
-    departureDate: new Date('2025-11-11'),
-    departureTime: '4:30 PM',
-    departureTerminal: 'Edo, Benin (HQ)',
-    arrivalTerminal: 'Lagos, Iyana-Ipaja',
-    availableSeats: 12,
-    price: 18500,
-  },
-  {
-    id: '6',
-    departureDate: new Date('2025-11-11'),
-    departureTime: '6:00 PM',
-    departureTerminal: 'Edo, Benin (HQ)',
-    arrivalTerminal: 'Lagos, Iyana-Ipaja',
-    availableSeats: 6,
-    price: 27000,
-  },
-];
+
 
 const TicketerDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = 5; // As shown in the image
-  const [isNavigating, setIsNavigating] = useState(false);
   const navigate = useNavigate();
 
-  const handleTripSelect = (trip: Trip) => {
-    console.log('Selected trip:', trip);
-    setIsNavigating(true);
-    // Simulate loading delay
-    setTimeout(() => {
-      navigate('/booking/identify');
-    }, 1500);
-  };
+  const { fetchTrips, availableTrips, isLoadingTrips, searchFilters } = useBookingStore();
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
 
   const handleSearch = () => {
     console.log('Search triggered');
-    // Handle search - fetch new trips based on filters
+    fetchTrips(searchFilters);
   };
-
-  if (isNavigating) {
-    return <LoadingScreen />;
-  }
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-170px)]">
@@ -111,9 +48,19 @@ const TicketerDashboard: React.FC = () => {
 
           {/* Trip Cards */}
           <div className="space-y-4">
-            {mockTrips.map((trip) => (
-              <TripCard key={trip.id} trip={trip} onSelect={handleTripSelect} />
-            ))}
+            {isLoadingTrips ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : availableTrips.length > 0 ? (
+              availableTrips.map((trip) => (
+                <TripCard key={trip.id} trip={trip} />
+              ))
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                No trips found.
+              </div>
+            )}
           </div>
 
           {/* Pagination */}

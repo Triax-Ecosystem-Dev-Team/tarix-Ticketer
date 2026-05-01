@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarix Ticketer API Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --primary-dark: #0284c7;
+            --bg: #f8fafc;
+            --sidebar-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #f8fafc;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            padding: 2rem;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-group {
+            margin-bottom: 2rem;
+        }
+
+        .nav-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        /* Main Content */
+        main {
+            margin-left: 280px;
+            flex: 1;
+            padding: 3rem 4rem;
+            max-width: 1000px;
+        }
+
+        header {
+            margin-bottom: 4rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin: 3rem 0 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2rem 0 1rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        .endpoint {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .endpoint-header {
+            padding: 1rem 1.5rem;
+            background: #fcfcfc;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .method {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        .method.get { background-color: #3b82f6; }
+        .method.post { background-color: #10b981; }
+        .method.put { background-color: #f59e0b; }
+        .method.delete { background-color: #ef4444; }
+        .method.patch { background-color: #6366f1; }
+
+        .path {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        .endpoint-body {
+            padding: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.25rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--primary-dark);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-auth { background: #fee2e2; color: #ef4444; }
+        .badge-public { background: #dcfce7; color: #166534; }
+
+        .troubleshooting {
+            background: #fff;
+            border: 1px solid #fed7aa;
+            border-left: 4px solid #f59e0b;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 4rem;
+        }
+
+        @media (max-width: 768px) {
+            aside { display: none; }
+            main { margin-left: 0; padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <aside>
+        <div class="logo">
+            <span>🚌</span> Tarix API
+        </div>
+        
+        <div class="nav-group">
+            <div class="nav-title">Introduction</div>
+            <a href="#overview" class="nav-link">Overview</a>
+            <a href="#authentication" class="nav-link">Authentication</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">Auth Endpoints</div>
+            <a href="#auth-register" class="nav-link">Register</a>
+            <a href="#auth-login" class="nav-link">Login</a>
+            <a href="#auth-me" class="nav-link">Get Profile</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">Trips</div>
+            <a href="#trips-get" class="nav-link">List Trips</a>
+            <a href="#trips-post" class="nav-link">Create Trip</a>
+            <a href="#trips-id" class="nav-link">Trip Details</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">Bookings</div>
+            <a href="#bookings-post" class="nav-link">Create Booking</a>
+            <a href="#bookings-get" class="nav-link">My Bookings</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">Admin Management</div>
+            <a href="#admin-stats" class="nav-link">Dashboard Stats</a>
+            <a href="#admin-staff" class="nav-link">Staff Management</a>
+            <a href="#admin-drivers" class="nav-link">Driver Management</a>
+            <a href="#admin-revenue" class="nav-link">Revenue Trend</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">System Settings</div>
+            <a href="#settings-get" class="nav-link">Get Settings</a>
+            <a href="#settings-put" class="nav-link">Update Settings</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">System</div>
+            <a href="#testing" class="nav-link">Verification Tests</a>
+            <a href="#frontend-issues" class="nav-link">Troubleshooting</a>
+        </div>
+    </aside>
+
+    <main>
+        <header>
+            <h1 id="overview">Tarix Ticketer API Documentation</h1>
+            <p>Complete guide to integrating with the Tarix Ticketer backend services. Base URL: <code>http://localhost:5000/api</code></p>
+        </header>
+
+        <section id="authentication">
+            <h2>Authentication</h2>
+            <p>We use JWT-based authentication. Pass the token in the <code>Authorization</code> header for all private routes.</p>
+            <pre>Authorization: Bearer <your_jwt_token></pre>
+        </section>
+
+        <!-- AUTH SECTION -->
+        <h2>Auth Endpoints</h2>
+
+        <div class="endpoint" id="auth-register">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="path">/auth/register</span>
+                <span class="badge badge-public">Public</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Register a new user account.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "password123",
+  "role": "Admin" // Admin, Ticketer, or Passenger
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="auth-login">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="path">/auth/login</span>
+                <span class="badge badge-public">Public</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Login and get an access token.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "email": "admin@tarix.com",
+  "password": "admin123"
+}</pre>
+                <div class="section-title">Success Response (200)</div>
+                <pre>{
+  "success": true,
+  "data": {
+    "id": "uuid...",
+    "token": "jwt_token...",
+    "role": "Admin"
+  }
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="auth-me">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="path">/auth/me</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Get current user profile and balance.</p>
+            </div>
+        </div>
+
+        <!-- TRIPS SECTION -->
+        <h2 id="trips">Trips</h2>
+
+        <div class="endpoint" id="trips-get">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="path">/trips</span>
+                <span class="badge badge-public">Public</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Search and list available trips.</p>
+                <div class="section-title">Query Params</div>
+                <pre>?from=Lagos&to=Abuja&departureDate=2024-05-01</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="trips-post">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="path">/trips</span>
+                <span class="badge badge-auth">Admin Only</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Create a new trip schedule.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "departureTerminal": "Lagos",
+  "arrivalTerminal": "Abuja",
+  "departureDate": "2024-05-01",
+  "departureTime": "08:00 AM",
+  "price": 15000,
+  "availableSeats": 30
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="trips-id">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="path">/trips/:id</span>
+                <span class="badge badge-public">Public</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Get full details of a specific trip, including assigned bus, driver, and the dynamic <code>busModel</code> containing the <code>seatMatrix</code> layout and <code>basePrice</code>.</p>
+            </div>
+        </div>
+
+        <!-- BOOKINGS SECTION -->
+        <h2 id="bookings">Bookings</h2>
+
+        <div class="endpoint" id="bookings-post">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="path">/bookings</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Create a booking for one or more passengers.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "tripId": "uuid...",
+  "seats": 2,
+  "passengers": [
+    { "fullName": "John Doe", "seatNumber": "1A", "phone": "..." },
+    { "fullName": "Jane Doe", "seatNumber": "1B", "phone": "..." }
+  ],
+  "totalPrice": 30000,
+  "extraBaggage": 1
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="bookings-get">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="path">/bookings</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>List current user's bookings (or all bookings if Admin).</p>
+            </div>
+        </div>
+
+        <!-- ADMIN SECTION -->
+        <h2>Admin Management</h2>
+
+        <div class="endpoint" id="admin-staff">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="path">/admin/ticketers</span>
+                <span class="badge badge-auth">Admin Only</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Register a new ticketer with staff profile.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "fullName": "Staff Name",
+  "email": "staff@tarix.com",
+  "password": "...",
+  "phone": "...",
+  "idNumber": "STAFF001",
+  "station": "Lagos",
+  "monthlySalary": 50000
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="admin-drivers">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="path">/admin/drivers</span>
+                <span class="badge badge-auth">Admin Only</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Register a new driver.</p>
+            </div>
+        </div>
+
+        <div class="endpoint" id="admin-revenue">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="path">/admin/revenue-trend</span>
+                <span class="badge badge-auth">Admin Only</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Fetch daily revenue aggregation for the last 7 days.</p>
+            </div>
+        </div>
+
+        <!-- SETTINGS SECTION -->
+        <h2 id="system-settings">System Settings</h2>
+
+        <div class="endpoint" id="settings-get">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="path">/settings</span>
+                <span class="badge badge-public">Public</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Fetch global application settings, including dynamic pricing rules like <code>extraBaggagePrice</code>.</p>
+            </div>
+        </div>
+
+        <div class="endpoint" id="settings-put">
+            <div class="endpoint-header">
+                <span class="method put">PUT</span>
+                <span class="path">/settings</span>
+                <span class="badge badge-auth">Admin Only</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update global application settings.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "extraBaggagePrice": 2500
+}</pre>
+            </div>
+        </div>
+
+        <!-- TESTING SECTION -->
+        <h2 id="testing">Verification & Testing</h2>
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="path">System Health Check</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Run this script in your terminal to verify all endpoints are working correctly with the database:</p>
+                <pre>cd backend
+node test-endpoints.js</pre>
+            </div>
+        </div>
+
+        <div class="troubleshooting" id="frontend-issues">
+            <h3>Common Fixes</h3>
+            <ul>
+                <li><strong>CORS Blocked:</strong> Ensure your frontend port (e.g., 5173) is in the <code>origin</code> list in <code>server.js</code>.</li>
+                <li><strong>401 Error:</strong> Your JWT token in <code>localStorage</code> might be invalid. Log out and log back in.</li>
+                <li><strong>500 Error:</strong> Check your database connection string in <code>.env</code>.</li>
+            </ul>
+        </div>
+    </main>
+
+    <script>
+        document.querySelectorAll('.nav-link').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

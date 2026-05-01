@@ -1,13 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Copy, Download, Printer, Search, CheckCircle2 } from 'lucide-react';
+import { Check, CheckCircle2, Copy, Download, Printer, Search } from 'lucide-react';
 import TicketModal from '../components/TicketModal';
-
+import { useBookingStore } from '../store/useBookingStore';
 const BookingSuccess: React.FC = () => {
   const navigate = useNavigate();
-  const bookingReference = 'MKD-LOS-20250214-B001-A01';
+  const { selectedTrip, selectedSeats, registeredPassenger, extraBaggageCount, extraBaggagePrice, resetBooking } = useBookingStore();
+  
+  // In a real app, you'd get the actual reference from the createBooking response
+  const bookingReference = `TARIX-${selectedTrip?.id?.slice(0, 4)}-${registeredPassenger?.loginId?.slice(-4)}`;
   const [copied, setCopied] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+
+  const basePrice = selectedTrip?.busModel?.basePrice || selectedTrip?.bus?.busModel?.basePrice || selectedTrip?.price || 0;
+  const subtotal = selectedSeats.length * basePrice;
+  const baggageCost = extraBaggageCount * extraBaggagePrice;
+  const serviceFee = 500;
+  const total = subtotal + baggageCost + serviceFee;
 
   const handleCopyReference = () => {
     navigator.clipboard.writeText(bookingReference);
@@ -16,6 +25,7 @@ const BookingSuccess: React.FC = () => {
   };
 
   const handleSearchAnother = () => {
+    resetBooking();
     navigate('/'); 
   };
 
@@ -76,25 +86,25 @@ const BookingSuccess: React.FC = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm text-text-gray">Trip</p>
-                <p className="font-bold text-text-dark">Lagos → Ibadan</p>
+                <p className="font-bold text-text-dark">{selectedTrip?.departureTerminal} → {selectedTrip?.arrivalTerminal}</p>
               </div>
               <div className="flex justify-between items-center">
                 <p className="text-sm text-text-gray">Date & Time</p>
-                <p className="text-sm font-medium text-text-dark">Nov 15, 2025 at 2:00 PM</p>
+                <p className="text-sm font-medium text-text-dark">{selectedTrip ? new Date(selectedTrip.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''} at {selectedTrip?.departureTime}</p>
               </div>
               <div className="flex justify-between items-center">
                 <p className="text-sm text-text-gray">Passenger</p>
-                <p className="text-sm font-bold text-text-dark">Mr. Johnson Adebayo</p>
+                <p className="text-sm font-bold text-text-dark">{registeredPassenger?.title} {registeredPassenger?.firstname} {registeredPassenger?.surname}</p>
               </div>
               <div className="flex justify-between items-center">
-                <p className="text-sm text-text-gray">Seat</p>
-                <p className="font-bold text-text-dark">A1</p>
+                <p className="text-sm text-text-gray">Seats</p>
+                <p className="font-bold text-text-dark">{selectedSeats.join(', ')}</p>
               </div>
               
               <div className="pt-4 mt-4 border-t border-gray-200 flex justify-between items-end">
                 <p className="font-bold text-text-dark">Total Paid</p>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-text-dark">₦19,500</p>
+                  <p className="text-xl font-bold text-primary-blue">₦{total.toLocaleString()}</p>
                 </div>
               </div>
             </div>

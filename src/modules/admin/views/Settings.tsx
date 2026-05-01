@@ -1,15 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   User, Lock, Key, Shield, 
   Globe, Bell, Sun, Mail, 
   Building, CreditCard, Users, Code,
   Activity, Info, HelpCircle, 
-  Upload, Trash2, X
+  Upload, Trash2, X, DollarSign, Loader2, Save
 } from 'lucide-react';
+import api from '../../../shared/api';
 
 export default function Settings() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+
+  // Global Pricing State
+  const [extraBaggagePrice, setExtraBaggagePrice] = useState<number>(0);
+  const [isFetchingPrice, setIsFetchingPrice] = useState(true);
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const [priceMessage, setPriceMessage] = useState<{type: 'success'|'error', text: string} | null>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get('/settings');
+        if (res.data?.data) {
+          setExtraBaggagePrice(res.data.data.extraBaggagePrice);
+        }
+      } catch (err) {
+        console.error('Failed to fetch settings', err);
+      } finally {
+        setIsFetchingPrice(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSavePricing = async () => {
+    setIsSavingPrice(true);
+    setPriceMessage(null);
+    try {
+      const res = await api.put('/settings', { extraBaggagePrice });
+      if (res.data?.data) {
+        setExtraBaggagePrice(res.data.data.extraBaggagePrice);
+        setPriceMessage({ type: 'success', text: 'Pricing updated!' });
+        setTimeout(() => setPriceMessage(null), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      setPriceMessage({ type: 'error', text: 'Failed to update.' });
+    } finally {
+      setIsSavingPrice(false);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto w-full animate-in fade-in duration-300 pb-10">
@@ -173,6 +214,51 @@ export default function Settings() {
               <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">API Keys</h3>
               <p className="text-[13px] text-slate-500 leading-relaxed">Generate and manage API keys for integrations</p>
             </button>
+          </div>
+        </div>
+
+        {/* ── Global Pricing Section ── */}
+        <div>
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-[#1e293b] mb-1">Global Pricing</h2>
+            <p className="text-[13.5px] text-slate-500">Manage application-wide pricing and fees</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start relative hover:border-[#0ea5e9]/30 hover:shadow-md transition-all">
+              <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+                <DollarSign className="w-5 h-5 text-emerald-500" />
+              </div>
+              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Extra Baggage Price</h3>
+              <p className="text-[13px] text-slate-500 leading-relaxed mb-4">Set the base price for one unit of extra baggage.</p>
+              
+              <div className="w-full mt-auto relative">
+                <div className="relative mb-3">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-[14px]">₦</span>
+                  <input 
+                    type="number" 
+                    value={extraBaggagePrice}
+                    onChange={(e) => setExtraBaggagePrice(Number(e.target.value))}
+                    disabled={isFetchingPrice || isSavingPrice}
+                    className="w-full pl-7 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:bg-white transition-all font-medium text-slate-700"
+                  />
+                </div>
+                
+                <button 
+                  onClick={handleSavePricing}
+                  disabled={isFetchingPrice || isSavingPrice}
+                  className="w-full py-2 bg-[#0ea5e9] text-white rounded-xl text-[13px] font-bold hover:bg-[#0284c7] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {isSavingPrice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Changes
+                </button>
+                
+                {priceMessage && (
+                  <p className={`text-[12px] mt-2 font-medium text-center ${priceMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {priceMessage.text}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

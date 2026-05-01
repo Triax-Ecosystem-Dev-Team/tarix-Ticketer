@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+backend/src
+.env
+.gitignore
+backend/frontend_integration_guide.md
+details.txt
