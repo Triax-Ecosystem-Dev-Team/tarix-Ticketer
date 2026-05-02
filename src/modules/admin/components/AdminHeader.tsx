@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, Bell, ChevronDown, Settings, Menu } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
 import { Link } from 'react-router-dom';
+import UserNav from '../../../shared/components/UserNav';
 
 interface AdminHeaderProps {
   onMenuToggle: () => void;
@@ -75,53 +76,7 @@ const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
         </div>
         
         {/* User Profile */}
-        <div className="relative">
-          <button 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-2 pl-1 sm:pl-2 cursor-pointer focus:outline-none"
-          >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#0EA5E9] flex items-center
-                            justify-center text-white font-medium text-xs sm:text-sm">
-              JM
-            </div>
-            {/* Name — hidden on mobile, shown sm+ */}
-            <div className="hidden sm:flex items-center gap-1.5">
-              <span className="text-sm font-medium text-gray-700">John Manager</span>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </div>
-          </button>
-
-          {/* Dropdown */}
-          {isDropdownOpen && (
-            <div className="absolute right-0 top-12 mt-2 w-48 bg-white rounded-xl
-                            shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-100 py-1 z-50">
-              <div className="px-1 py-1">
-                {[
-                  { name: 'Profile', path: '/admin/profile' },
-                  { name: 'Settings', path: '/admin/settings' },
-                  { name: 'Help', path: '/admin/help' }
-                ].map((item) => (
-                  <Link 
-                    key={item.name}
-                    to={item.path}
-                    onClick={() => setIsDropdownOpen(false)}
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-600
-                               hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors block"
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </div>
-              <div className="h-px bg-gray-100 my-1 mx-4" />
-              <div className="px-1 py-1">
-                <button className="w-full text-left px-4 py-2.5 text-sm text-[#EF4444]
-                                   hover:bg-red-50 rounded-lg transition-colors font-medium">
-                  Logout
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <UserNav />
       </div>
     </header>
   );

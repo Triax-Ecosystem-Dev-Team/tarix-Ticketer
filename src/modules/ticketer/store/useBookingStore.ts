@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '../../../shared/types';
-import { SearchFilters, Trip, RegisteredPassenger } from '../types';
+import { SearchFilters, Trip, RegisteredPassenger, PaginationMeta } from '../types';
 import api from '../../../shared/api';
 
 interface BookingState {
@@ -14,6 +14,10 @@ interface BookingState {
     searchFilters: SearchFilters;
     setSearchFilters: (filters: Partial<SearchFilters>) => void;
     resetSearchFilters: () => void;
+    
+    // Pagination state
+    paginationMeta: PaginationMeta;
+    setPageAndFetch: (page: number) => Promise<void>;
 
     // Available trips
     availableTrips: Trip[];
@@ -64,11 +68,17 @@ interface BookingState {
 }
 
 const defaultSearchFilters: SearchFilters = {
-    from: '',
-    to: '',
-    departureDate: null,
+    departureTerminal: '',
+    arrivalTerminal: '',
+    date: null,
     passengers: 1,
     busType: undefined,
+};
+
+const defaultPaginationMeta: PaginationMeta = {
+    totalPages: 0,
+    currentPage: 1,
+    totalCount: 0,
 };
 
 export const useBookingStore = create<BookingState>()(
@@ -97,6 +107,15 @@ export const useBookingStore = create<BookingState>()(
         })),
     resetSearchFilters: () => set({ searchFilters: defaultSearchFilters }),
 
+    // Pagination state
+    paginationMeta: defaultPaginationMeta,
+    setPageAndFetch: async (page: number) => {
+        set((state) => ({
+            paginationMeta: { ...state.paginationMeta, currentPage: page }
+        }));
+        await get().fetchTrips({ page });
+    },
+
     // Available trips
     availableTrips: [],
     setAvailableTrips: (trips) => set({ availableTrips: trips }),
@@ -105,11 +124,39 @@ export const useBookingStore = create<BookingState>()(
     isLoading: false,
     setIsLoading: (loading) => set({ isLoading: loading }),
     isLoadingTrips: false,
-    fetchTrips: async (filters) => {
+    fetchTrips: async (additionalFilters) => {
         set({ isLoadingTrips: true });
         try {
-            const response = await api.get('/trips', { params: filters });
-            set({ availableTrips: response.data.data.trips || [], isLoadingTrips: false });
+            const currentFilters = get().searchFilters;
+            const currentPagination = get().paginationMeta;
+            
+            // Format filters for API
+            const params: Record<string, any> = {
+                page: currentPagination.currentPage,
+                limit: 10,
+                ...currentFilters,
+                ...additionalFilters,
+            };
+
+            // Don't send empty strings or nulls
+            Object.keys(params).forEach(key => {
+                if (params[key] === '' || params[key] === null || params[key] === undefined) {
+                    delete params[key];
+                }
+            });
+
+            const response = await api.get('/trips', { params });
+            
+            // [FIXED 3]: The Payload Extraction Trap
+            // Backend sends { success, data: { data: trips, meta: {...} }, message }
+            // So we must access response.data.data.data for the array!
+            const responseData = response.data.data || {};
+            
+            set({ 
+                availableTrips: responseData.data || [],
+                paginationMeta: responseData.meta || defaultPaginationMeta,
+                isLoadingTrips: false 
+            });
         } catch (error) {
             console.error('Failed to fetch trips:', error);
             set({ isLoadingTrips: false });

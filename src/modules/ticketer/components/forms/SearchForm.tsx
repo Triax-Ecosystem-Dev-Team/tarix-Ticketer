@@ -33,60 +33,60 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        {/* From Field */}
+        {/* Departure Terminal */}
         <div>
           <label className="block text-xs font-medium text-text-gray mb-2">
-            From
+            Leaving From
           </label>
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-blue" />
             <input
               type="text"
-              {...register('from', { required: 'Origin is required' })}
+              {...register('departureTerminal', { required: 'Origin is required' })}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-border-gray rounded-lg text-sm text-text-dark placeholder:text-text-gray focus:outline-none focus:ring-2 focus:ring-primary-blue/20 focus:border-primary-blue transition-colors"
               placeholder="Edo, Benin (HQ)"
             />
           </div>
-          {errors.from && (
-            <p className="text-xs text-red-500 mt-1">{errors.from.message}</p>
+          {errors.departureTerminal && (
+            <p className="text-xs text-red-500 mt-1">{errors.departureTerminal.message}</p>
           )}
         </div>
 
-        {/* To Field */}
+        {/* Arrival Terminal */}
         <div>
           <label className="block text-xs font-medium text-text-gray mb-2">
-            To
+            Going To
           </label>
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF5252]" />
             <input
               type="text"
-              {...register('to', { required: 'Destination is required' })}
+              {...register('arrivalTerminal', { required: 'Destination is required' })}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-border-gray rounded-lg text-sm text-text-dark placeholder:text-text-gray focus:outline-none focus:ring-2 focus:ring-primary-blue/20 focus:border-primary-blue transition-colors"
               placeholder="Lagos, Iyana-Ipaja"
             />
           </div>
-          {errors.to && (
-            <p className="text-xs text-red-500 mt-1">{errors.to.message}</p>
+          {errors.arrivalTerminal && (
+            <p className="text-xs text-red-500 mt-1">{errors.arrivalTerminal.message}</p>
           )}
         </div>
 
-        {/* Departure Date */}
+        {/* Date Field */}
         <div>
           <label className="block text-xs font-medium text-text-gray mb-2">
-            Departure Date
+            Date
           </label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-blue pointer-events-none" />
             <input
               type="date"
-              {...register('departureDate')}
+              {...register('date')}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-border-gray rounded-lg text-sm text-text-dark focus:outline-none focus:ring-2 focus:ring-primary-blue/20 focus:border-primary-blue transition-colors"
             />
           </div>
-          {errors.departureDate && (
+          {errors.date && (
             <p className="text-xs text-red-500 mt-1">
-              {errors.departureDate.message}
+              {errors.date.message}
             </p>
           )}
         </div>

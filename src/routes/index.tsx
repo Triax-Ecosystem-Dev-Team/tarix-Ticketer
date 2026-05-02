@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
+import DashboardLayout from '../shared/components/layout/DashboardLayout';
 import ProtectedRoute from '../shared/components/ProtectedRoute';
 import LoginPage from '../modules/auth/views/LoginPage';
 import TicketerDashboard from '../modules/ticketer/views/TicketerDashboard';
@@ -68,65 +69,73 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute allowedRoles={['Ticketer', 'Passenger', 'Admin']} />,
     children: [
       {
+        // Enclosed Flow (Booking)
         path: '',
         element: <App />,
         children: [
-      {
-        index: true,
-        element: <TicketerDashboard />,
+          {
+            path: 'booking/identify',
+            element: <UserIdentification />,
+          },
+          {
+            path: 'booking/passenger-details',
+            element: <PassengerDetails />,
+          },
+          {
+            path: 'booking/select-seat',
+            element: <SeatSelection />,
+          },
+          {
+            path: 'booking/baggage',
+            element: <ExtraBaggage />,
+          },
+          {
+            path: 'booking/payment',
+            element: <PaymentMethod />,
+          },
+          {
+            path: 'booking/confirmation',
+            element: <BookingConfirmation />,
+          },
+          {
+            path: 'booking/success',
+            element: <BookingSuccess />,
+          },
+        ]
       },
       {
-        path: 'booking/identify',
-        element: <UserIdentification />,
-      },
-      {
-        path: 'booking/passenger-details',
-        element: <PassengerDetails />,
-      },
-      {
-        path: 'booking/select-seat',
-        element: <SeatSelection />,
-      },
-      {
-        path: 'booking/baggage',
-        element: <ExtraBaggage />,
-      },
-      {
-        path: 'booking/payment',
-        element: <PaymentMethod />,
-      },
-      {
-        path: 'booking/confirmation',
-        element: <BookingConfirmation />,
-      },
-      {
-        path: 'booking/success',
-        element: <BookingSuccess />,
-      },
-      {
-        path: 'bus-status',
-        element: <BusStatusPage />,
-      },
-      {
-        path: 'find-ticket',
-        element: <FindTicket />,
-      },
-      {
-        path: 'bus-status/passengers/:busId',
-        element: <PassengerList />,
-      },
-      {
-        path: 'overview',
-        element: <OverviewPage />,
-      },
-      {
-        path: 'bookings',
-        element: <BookingPage />,
-      },
-      {
-        path: '*',
-        element: <NotFoundPage />,
-      },
+        // Utility/Dashboard Routes (Global Nav)
+        path: '',
+        element: <DashboardLayout />,
+        children: [
+          {
+            index: true,
+            element: <TicketerDashboard />,
+          },
+          {
+            path: 'bus-status',
+            element: <BusStatusPage />,
+          },
+          {
+            path: 'find-ticket',
+            element: <FindTicket />,
+          },
+          {
+            path: 'bus-status/passengers/:busId',
+            element: <PassengerList />,
+          },
+          {
+            path: 'overview',
+            element: <OverviewPage />,
+          },
+          {
+            path: 'bookings',
+            element: <BookingPage />,
+          },
+          {
+            path: '*',
+            element: <NotFoundPage />,
+          },
         ],
       },
     ],

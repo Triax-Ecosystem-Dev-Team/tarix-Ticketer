@@ -14,11 +14,18 @@ export interface Trip {
     occupiedSeats?: string[];
 }
 
+// Pagination Meta
+export interface PaginationMeta {
+    totalPages: number;
+    currentPage: number;
+    totalCount: number;
+}
+
 // Search filter types
 export interface SearchFilters {
-    from: string;
-    to: string;
-    departureDate: Date | null;
+    departureTerminal: string;
+    arrivalTerminal: string;
+    date: Date | string | null;
     passengers: number;
     busType?: string;
 }

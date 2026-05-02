@@ -6,17 +6,14 @@ import Pagination from '../../../shared/components/Pagination';
 import MobileSearchButton from '../components/forms/MobileSearchButton';
 import LoadingScreen from '../../../shared/components/LoadingScreen';
 import { Trip } from '../types';
-import Header from '../../../shared/components/Header';
 import { useBookingStore } from '../store/useBookingStore';
 
 
 
 const TicketerDashboard: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 5; // As shown in the image
   const navigate = useNavigate();
 
-  const { fetchTrips, availableTrips, isLoadingTrips, searchFilters } = useBookingStore();
+  const { fetchTrips, availableTrips, isLoadingTrips, searchFilters, paginationMeta, setPageAndFetch } = useBookingStore();
 
   useEffect(() => {
     fetchTrips();
@@ -24,12 +21,12 @@ const TicketerDashboard: React.FC = () => {
 
   const handleSearch = () => {
     console.log('Search triggered');
-    fetchTrips(searchFilters);
+    // When searching, reset to page 1
+    setPageAndFetch(1);
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-170px)]">
-      <Header />
+    <div className="flex flex-col min-h-[calc(100vh-170px)] mt-6">
       <div className="flex flex-1">
       {/* Left Sidebar - Search Filters (Desktop) */}
       <aside className="hidden lg:block w-[230px] flex-shrink-0">
@@ -42,9 +39,14 @@ const TicketerDashboard: React.FC = () => {
       <main className="flex-1 bg-gray-50">
         <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:pl-6 lg:pr-8">
           {/* Section Header */}
-          <h1 className="text-xl font-bold text-text-dark mb-6">
-            Available Trips
-          </h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-xl font-bold text-text-dark">
+              Available Trips
+            </h1>
+            <span className="text-sm text-text-gray font-medium">
+              Found {paginationMeta.totalCount} trips
+            </span>
+          </div>
 
           {/* Trip Cards */}
           <div className="space-y-4">
@@ -64,11 +66,13 @@ const TicketerDashboard: React.FC = () => {
           </div>
 
           {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+          {paginationMeta.totalPages > 1 && (
+            <Pagination
+              currentPage={paginationMeta.currentPage}
+              totalPages={paginationMeta.totalPages}
+              onPageChange={setPageAndFetch}
+            />
+          )}
         </div>
       </main>
 

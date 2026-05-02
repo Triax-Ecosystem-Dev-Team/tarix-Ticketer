@@ -24,7 +24,8 @@ interface TicketModalProps {
 
 const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, officialBooking }) => {
   const contentRef = useRef<HTMLDivElement>(null);
-  const ticketRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const ticketRef = useRef<HTMLDivElement>(null); // Keeping ticketRef as fallback if needed elsewhere
   const [isDownloading, setIsDownloading] = useState(false);
   
   // Disconnect financial data from Zustand, but keep passenger/trip as fallback
@@ -46,37 +47,62 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, officialBook
   };
 
   const handleDownload = async () => {
-    if (!ticketRef.current || !officialBooking) return;
+    // Target the Right Element: contentRef is pointing to the specific div holding the ticket content
+    const element = contentRef.current;
+    const wrapper = wrapperRef.current;
+    if (!element || !officialBooking) return;
+    
+    // Pre-Capture Styling: Store original styles
+    const originalStyle = {
+      height: element.style.height,
+      maxHeight: element.style.maxHeight,
+      overflow: element.style.overflow
+    };
+    
+    // Also store wrapper styles to ensure no clipping from parent
+    const wrapperStyle = wrapper ? {
+      height: wrapper.style.height,
+      maxHeight: wrapper.style.maxHeight,
+      overflow: wrapper.style.overflow
+    } : null;
     
     try {
       setIsDownloading(true);
       
-      // Capture the exact styled element
-      const canvas = await html2canvas(ticketRef.current, {
-        scale: 2, // Higher resolution for crisp text
+      // Force the element to its full expanded height
+      element.style.height = 'auto';
+      element.style.maxHeight = 'none';
+      element.style.overflow = 'visible';
+      
+      if (wrapper) {
+        wrapper.style.height = 'auto';
+        wrapper.style.maxHeight = 'none';
+        wrapper.style.overflow = 'visible';
+      }
+      
+      // High-Res Canvas
+      const canvas = await html2canvas(element, {
+        scale: 2, 
         useCORS: true,
-        backgroundColor: '#ffffff', // Force white background
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        backgroundColor: '#ffffff',
         logging: false
       });
       
       const imgData = canvas.toDataURL('image/png');
       
-      // Calculate PDF dimensions to preserve aspect ratio
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      // Add a 10mm margin
+      // A4 PDF Formatting
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = 210; // A4 width in mm
       const margin = 10;
-      const imgWidth = pdfWidth - (margin * 2);
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const usableWidth = pdfWidth - (margin * 2);
       
-      pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+      // Calculate the aspect ratio to ensure perfect scaling
+      const ratio = usableWidth / canvas.width;
+      const imgHeight = canvas.height * ratio;
+      
+      pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, imgHeight);
       pdf.save(`TARIX-Ticket-${officialBooking.id}.pdf`);
       
     } catch (error) {
@@ -84,6 +110,16 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, officialBook
       alert('Failed to generate PDF ticket. Please try again or use the Print option.');
     } finally {
       setIsDownloading(false);
+      // Cleanup: Restore original inline styles
+      element.style.height = originalStyle.height;
+      element.style.maxHeight = originalStyle.maxHeight;
+      element.style.overflow = originalStyle.overflow;
+      
+      if (wrapper && wrapperStyle) {
+        wrapper.style.height = wrapperStyle.height;
+        wrapper.style.maxHeight = wrapperStyle.maxHeight;
+        wrapper.style.overflow = wrapperStyle.overflow;
+      }
     }
   };
 
@@ -92,7 +128,7 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, officialBook
       <div 
         className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto print:max-w-none print:shadow-none print:w-full print:h-auto print:overflow-visible"
         onClick={e => e.stopPropagation()}
-        ref={contentRef}
+        ref={wrapperRef}
       >
         {/* Header - Hidden during print */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 print:hidden">
@@ -124,7 +160,7 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, officialBook
         {/* Ticket Content - The element captured by html2canvas and printer */}
         <div className="p-8 pt-2 print:p-0">
           <div 
-            ref={ticketRef} 
+            ref={contentRef} 
             className="border border-gray-100 rounded-xl p-8 shadow-sm print:border-none print:shadow-none print:p-0 bg-white"
           >
             

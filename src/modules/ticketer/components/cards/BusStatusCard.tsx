@@ -1,13 +1,86 @@
 import React from 'react';
 import { ArrowRight, Users, ChevronRight } from 'lucide-react';
-import { BusStatus } from '../../data/busStatusData';
+import { useNavigate } from 'react-router-dom';
+import { useDispatchStore } from '../../store/useDispatchStore';
+
+export interface BusStatus {
+  id: string;
+  status: 'Active' | 'In Transit' | 'Completed' | 'Delayed' | 'Cancelled';
+  origin: string;
+  destination: string;
+  originTerminal: string;
+  destinationTerminal: string;
+  departureTime: string;
+  arrivalTime: string;
+  busType: string;
+  driver: string;
+  seatsBooked: number;
+  totalSeats: number;
+  passengersBooked: number;
+}
 
 interface BusStatusCardProps {
   bus: BusStatus;
 }
 
 const BusStatusCard: React.FC<BusStatusCardProps> = ({ bus }) => {
-  const occupancyPercentage = Math.round((bus.seatsBooked / bus.totalSeats) * 100);
+  const navigate = useNavigate();
+  const [isManageModalOpen, setIsManageModalOpen] = React.useState(false);
+  const [isUpdating, setIsUpdating] = React.useState(false);
+  const [selectedStatus, setSelectedStatus] = React.useState<string | null>(null);
+  const [actualArrival, setActualArrival] = React.useState('');
+  const { updateBusStatus } = useDispatchStore();
+  
+  const occupancyPercentage = Math.round((bus.seatsBooked / bus.totalSeats) * 100) || 0;
+
+  // 1. The Arrival Time "NaN" Fix Helper
+  const calculateETA = (departure: string, durationHours: number = 4): string => {
+    try {
+      if (!departure) return 'Scheduled';
+      
+      const timeParts = departure.match(/(\d+):(\d+)/);
+      if (!timeParts) return 'Scheduled';
+
+      let hours = parseInt(timeParts[1], 10);
+      const minutes = parseInt(timeParts[2], 10);
+
+      if (departure.toLowerCase().includes('pm') && hours < 12) hours += 12;
+      if (departure.toLowerCase().includes('am') && hours === 12) hours = 0;
+
+      const date = new Date();
+      date.setHours(hours, minutes, 0);
+      
+      if (isNaN(date.getTime())) return 'Scheduled';
+
+      const arrivalDate = new Date(date.getTime() + durationHours * 60 * 60 * 1000);
+      return `${arrivalDate.getHours().toString().padStart(2, '0')}:${arrivalDate.getMinutes().toString().padStart(2, '0')} (ETA)`;
+    } catch (error) {
+      return 'Scheduled';
+    }
+  };
+
+  const arrivalDisplay = bus.arrivalTime && bus.arrivalTime !== 'TBD' 
+    ? bus.arrivalTime 
+    : calculateETA(bus.departureTime);
+
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (newStatus === 'Completed' && selectedStatus !== 'Completed') {
+        setSelectedStatus('Completed');
+        setActualArrival(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+        return;
+    }
+
+    try {
+      setIsUpdating(true);
+      await updateBusStatus(bus.id, newStatus, newStatus === 'Completed' ? actualArrival : undefined);
+      setIsManageModalOpen(false);
+      setSelectedStatus(null);
+    } catch (err) {
+      alert('Failed to update status');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -49,10 +122,6 @@ const BusStatusCard: React.FC<BusStatusCardProps> = ({ bus }) => {
         </div>
         <ArrowRight className="w-5 h-5 text-[#0095FF] flex-shrink-0" />
         <div className="flex-1 text-right">
-             {/* Text align right for the container but we want the content to be aligned nicely. 
-                 The screenshot shows standard left alignment for text even on the right side? 
-                 Actually looking at the screenshot, "TO" is left aligned relative to its column. 
-                 Let's keep it simple. */}
           <div className="flex flex-col items-start pl-4">
              <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">TO</p>
              <p className="font-bold text-text-dark text-base">{bus.destination}</p>
@@ -69,7 +138,7 @@ const BusStatusCard: React.FC<BusStatusCardProps> = ({ bus }) => {
         </div>
         <div className="bg-gray-50 rounded-xl p-3 border border-gray-100/50">
           <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">ARRIVAL</p>
-          <p className="font-bold text-text-dark text-sm">{bus.arrivalTime}</p>
+          <p className="font-bold text-text-dark text-sm">{arrivalDisplay}</p>
         </div>
         <div className="bg-gray-50 rounded-xl p-3 border border-gray-100/50">
           <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">BUS TYPE</p>
@@ -122,31 +191,89 @@ const BusStatusCard: React.FC<BusStatusCardProps> = ({ bus }) => {
              </div>
          </div>
          <button 
-             onClick={() => {
-                 // Prevent bubbling if clicking the container
-                 // e.stopPropagation(); 
-                 // Assuming we want to navigate
-                 // For now, let's use window.location or navigate if available
-                 // But since useNavigate isn't imported, let's just make it a link or use proper navigation
-                 // Actually this component likely needs useNavigate
+             onClick={(e) => {
+                 e.stopPropagation();
+                 navigate(`/bus-status/passengers/${bus.id}`);
              }}
              className="flex items-center gap-1 text-[11px] font-bold text-[#0095FF] hover:text-[#007ACC] transition-colors"
          >
-             <a href={`/bus-status/passengers/${bus.id}`} className="flex items-center gap-1">
-                View List <ChevronRight className="w-3.5 h-3.5" />
-             </a>
+             View List <ChevronRight className="w-3.5 h-3.5" />
          </button>
       </div>
       
       {/* Footer Actions */}
       <div className="grid grid-cols-2 gap-3 mt-auto">
-        <button className="py-3 bg-[#0095FF] text-white rounded-lg text-sm font-bold hover:bg-[#0086E6] transition-colors shadow-sm shadow-blue-100">
+        <button 
+          onClick={() => navigate(`/bus-status/passengers/${bus.id}`)}
+          className="py-3 bg-[#0095FF] text-white rounded-lg text-sm font-bold hover:bg-[#0086E6] transition-colors shadow-sm shadow-blue-100"
+        >
           View Details
         </button>
-        <button className="py-3 bg-white border border-gray-200 text-[#0095FF] rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors">
+        <button 
+          onClick={() => setIsManageModalOpen(true)}
+          className="py-3 bg-white border border-gray-200 text-[#0095FF] rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors"
+        >
           Manage
         </button>
       </div>
+
+      {/* Manage Status Modal */}
+      {isManageModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-text-dark">Update Trip Status</h3>
+              <p className="text-xs text-text-gray mt-1">Bus Reference: <span className="font-bold text-primary-blue">{bus.id}</span></p>
+            </div>
+            <div className="p-4 space-y-2">
+              {['Active', 'In Transit', 'Delayed', 'Cancelled', 'Completed'].map((status) => (
+                <div key={status}>
+                  <button
+                    onClick={() => handleStatusUpdate(status)}
+                    disabled={isUpdating}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between group ${
+                      (selectedStatus || bus.status) === status ? 'bg-primary-blue text-white' : 'hover:bg-gray-50 text-text-gray'
+                    }`}
+                  >
+                    {status}
+                    <ChevronRight className={`w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity ${(selectedStatus || bus.status) === status ? 'opacity-100' : ''}`} />
+                  </button>
+                  
+                  {status === 'Completed' && selectedStatus === 'Completed' && (
+                    <div className="mt-3 p-4 bg-blue-50 rounded-xl border border-blue-100 animate-in slide-in-from-top-2 duration-200">
+                        <label className="block text-[10px] font-bold text-blue-600 uppercase mb-2">Actual Arrival Time</label>
+                        <input 
+                            type="time" 
+                            value={actualArrival}
+                            onChange={(e) => setActualArrival(e.target.value)}
+                            className="w-full px-4 py-2 bg-white border border-blue-200 rounded-lg text-sm font-bold text-text-dark focus:outline-none focus:border-primary-blue"
+                        />
+                        <button 
+                            onClick={() => handleStatusUpdate('Completed')}
+                            disabled={isUpdating}
+                            className="w-full mt-3 py-2.5 bg-primary-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors"
+                        >
+                            Confirm Arrival & Complete
+                        </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="p-4 bg-gray-50">
+              <button 
+                onClick={() => {
+                    setIsManageModalOpen(false);
+                    setSelectedStatus(null);
+                }}
+                className="w-full py-3 text-sm font-bold text-text-gray hover:text-text-dark"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

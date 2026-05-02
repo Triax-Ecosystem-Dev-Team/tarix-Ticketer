@@ -90,6 +90,8 @@ model Trip {
   driver            Driver?   @relation(fields: [driverId], references: [id])
   busModelId        String?
   busModel          BusModel? @relation(fields: [busModelId], references: [id])
+  status            String    @default("Active")
+  actualArrival     String?
 }
 
 model Booking {
