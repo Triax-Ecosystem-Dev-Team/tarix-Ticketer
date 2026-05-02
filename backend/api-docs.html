@@ -288,6 +288,14 @@
         </div>
 
         <div class="nav-group">
+            <div class="nav-title">User Profile & Security</div>
+            <a href="#user-profile" class="nav-link">Update Profile</a>
+            <a href="#user-password" class="nav-link">Change Password</a>
+            <a href="#user-2fa" class="nav-link">Toggle 2FA</a>
+            <a href="#user-preferences" class="nav-link">Update Preferences</a>
+        </div>
+
+        <div class="nav-group">
             <div class="nav-title">System</div>
             <a href="#testing" class="nav-link">Verification Tests</a>
             <a href="#frontend-issues" class="nav-link">Troubleshooting</a>
@@ -517,6 +525,75 @@
                 <div class="section-title">Request Body</div>
                 <pre>{
   "extraBaggagePrice": 2500
+}</pre>
+            </div>
+        </div>
+
+        <!-- USER PROFILE & SECURITY SECTION -->
+        <h2 id="user-settings">User Profile & Security</h2>
+
+        <div class="endpoint" id="user-profile">
+            <div class="endpoint-header">
+                <span class="method patch">PATCH</span>
+                <span class="path">/users/profile</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update user personal details like name, phone, and avatar.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "name": "Jane Doe",
+  "phone": "08012345678",
+  "avatar": "https://example.com/avatar.jpg"
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="user-password">
+            <div class="endpoint-header">
+                <span class="method patch">PATCH</span>
+                <span class="path">/users/security/password</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update account password.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "currentPassword": "password123",
+  "newPassword": "newpassword123"
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="user-2fa">
+            <div class="endpoint-header">
+                <span class="method patch">PATCH</span>
+                <span class="path">/users/security/2fa</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Enable or disable 2FA for the user account.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "enabled": true
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="user-preferences">
+            <div class="endpoint-header">
+                <span class="method patch">PATCH</span>
+                <span class="path">/users/preferences</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update user theme and notification preferences.</p>
+                <div class="section-title">Request Body</div>
+                <pre>{
+  "theme": "dark",
+  "notifEmail": true,
+  "notifSms": false,
+  "notifPush": true
 }</pre>
             </div>
         </div>

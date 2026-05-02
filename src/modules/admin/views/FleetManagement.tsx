@@ -1,45 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Bus as BusIcon, Search, LayoutGrid, List, Plus, MapPin, Wrench, CheckCircle2, 
-  Star, AlertCircle, Clock, MoreVertical, X 
+  Star, AlertCircle, Clock, MoreVertical, X, FileText, Download 
 } from 'lucide-react';
 import clsx from 'clsx';
 import { Link } from 'react-router-dom';
-
-// --- MOCK DATA --- 
-const MOCK_STATS = [
-  { id: 'total', label: 'TOTAL BUSES', value: '6', subLabel: 'Active in fleet', trend: '↑ 2 added this month', type: 'info', icon: BusIcon },
-  { id: 'avail', label: 'AVAILABLE', value: '2', subLabel: 'Ready for trips', type: 'success', icon: CheckCircle2 },
-  { id: 'ontrip', label: 'ON TRIP', value: '3', subLabel: 'Currently active', type: 'warning', icon: MapPin },
-  { id: 'maint', label: 'MAINTENANCE', value: '1', subLabel: 'Under service', type: 'danger', icon: Wrench },
-];
-
-const MOCK_BUSES = [
-  { 
-    id: 'BUS-001', status: 'On Trip', type: 'Luxury Coach', capacity: '50 seats', plate: 'ABC-123-XY', service: 'Nov 15, 2025',
-    trips: 12, revenue: '₦456,000', utilization: 92, tokens: '45,600', rating: '4.8/5', issues: 0, avgTrip: '8h 20m'
-  },
-  { 
-    id: 'BUS-002', status: 'Available', type: 'Luxury Coach', capacity: '50 seats', plate: 'ABC-124-XY', service: 'Nov 10, 2025',
-    trips: 10, revenue: '₦380,000', utilization: 85, tokens: '38,000', rating: '4.7/5', issues: 0, avgTrip: '7h 45m'
-  },
-  { 
-    id: 'BUS-003', status: 'On Trip', type: 'Standard Coach', capacity: '45 seats', plate: 'ABC-125-XY', service: 'Nov 20, 2025',
-    trips: 11, revenue: '₦396,000', utilization: 88, tokens: '39,600', rating: '4.6/5', issues: 0, avgTrip: '6h 10m'
-  },
-  { 
-    id: 'BUS-004', status: 'Available', type: 'Luxury Coach', capacity: '50 seats', plate: 'ABC-126-XY', service: 'Nov 16, 2025',
-    trips: 13, revenue: '₦494,000', utilization: 95, tokens: '49,400', rating: '4.9/5', issues: 0, avgTrip: '8h 30m'
-  },
-  { 
-    id: 'BUS-005', status: 'Maintenance', type: 'Standard Coach', capacity: '45 seats', plate: 'ABC-127-XY', service: 'Nov 25, 2025',
-    trips: 0, revenue: '₦0', utilization: 0, tokens: '0', rating: '4.5/5', issues: 1, avgTrip: '--'
-  },
-  { 
-    id: 'BUS-006', status: 'On Trip', type: 'Luxury Coach', capacity: '50 seats', plate: 'ABC-128-XY', service: 'Nov 12, 2025',
-    trips: 14, revenue: '₦532,000', utilization: 98, tokens: '53,200', rating: '4.8/5', issues: 0, avgTrip: '8h 15m'
-  },
-];
+import { useFleetStore } from '../store/useFleetStore';
+import toast from 'react-hot-toast';
+import ReassignmentModal from '../components/ReassignmentModal';
 
 // --- HELPERS ---
 const getStatusColor = (status: string) => {
@@ -62,15 +30,40 @@ const getStatusIndicator = (status: string) => {
 
 
 export default function FleetManagement() {
+  const { 
+    buses, fleetStats, isLoading, performanceData, 
+    fetchFleet, fetchFleetPerformance, updateBusStatus, updateBus, deleteBus 
+  } = useFleetStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedBus, setSelectedBus] = useState<typeof MOCK_BUSES[0] | null>(null);
+  const [selectedBus, setSelectedBus] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Performance' | 'Trip History' | 'Maintenance'>('Overview');
+  const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [maintenanceDate, setMaintenanceDate] = useState('');
+  const [decommissioningBus, setDecommissioningBus] = useState<any | null>(null);
+  const [forceDecommission, setForceDecommission] = useState(false);
+
+  useEffect(() => {
+    fetchFleet();
+    fetchFleetPerformance();
+  }, [fetchFleet, fetchFleetPerformance]);
+
+  // Click outside to close menus
+  useEffect(() => {
+    const handleClickOutside = () => setMenuOpenFor(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Notification timeout - no longer needed with react-hot-toast
 
   return (
-    <div className="max-w-7xl mx-auto w-full animate-in fade-in duration-300 pb-10">
+    <div className="max-w-7xl mx-auto w-full animate-in fade-in duration-300 pb-10 relative">
       
+      <ReassignmentModal />
+
       {/* ── Breadcrumbs & Header ── */}
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -143,7 +136,12 @@ export default function FleetManagement() {
 
       {/* ── Top Summary Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {MOCK_STATS.map((stat) => {
+        {[
+          { id: 'total', label: 'TOTAL BUSES', value: fleetStats.total.toString(), subLabel: 'Active in fleet', type: 'info', icon: BusIcon },
+          { id: 'avail', label: 'AVAILABLE', value: fleetStats.available.toString(), subLabel: 'Ready for trips', type: 'success', icon: CheckCircle2 },
+          { id: 'ontrip', label: 'ON TRIP', value: fleetStats.onTrip.toString(), subLabel: 'Currently active', type: 'warning', icon: MapPin },
+          { id: 'maint', label: 'MAINTENANCE', value: fleetStats.maintenance.toString(), subLabel: 'Under service', type: 'danger', icon: Wrench },
+        ].map((stat) => {
           const IconStyle = 
             stat.type === 'info' ? 'bg-[#e0f2fe] text-[#0ea5e9]' :
             stat.type === 'success' ? 'bg-[#dcfce7] text-[#22c55e]' :
@@ -165,9 +163,6 @@ export default function FleetManagement() {
               <div className="flex items-center justify-between">
                 <p className="text-[12.5px] text-slate-500 font-medium">{stat.subLabel}</p>
               </div>
-              {stat.trend && (
-                <p className="text-[12px] font-semibold text-[#22c55e] mt-1">{stat.trend}</p>
-              )}
             </div>
           );
         })}
@@ -180,50 +175,89 @@ export default function FleetManagement() {
           
           {/* Metrics Grid */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
-              <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Trips</p>
-              <p className="text-[18px] sm:text-[24px] lg:text-[26px] font-bold text-[#1e293b] mb-1">156</p>
-              <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">+12% vs last</p>
-            </div>
-            <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
-              <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Revenue</p>
-              <p className="text-[15px] sm:text-[22px] lg:text-[26px] font-bold text-[#22c55e] mb-1">₦7,280,000</p>
-              <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">+8% vs last</p>
-            </div>
-            <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
-              <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Avg Utilization</p>
-              <p className="text-[18px] sm:text-[24px] lg:text-[26px] font-bold text-[#0ea5e9] mb-1">87%</p>
-              <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">+5% vs last</p>
-            </div>
-            <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
-              <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Tokens</p>
-              <p className="text-[16px] sm:text-[22px] lg:text-[26px] font-bold text-[#f59e0b] mb-1">728,000</p>
-              <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">+10% vs last</p>
-            </div>
+            {!performanceData ? (
+              <>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 animate-pulse">
+                    <div className="h-3 w-16 bg-slate-200 rounded mb-2"></div>
+                    <div className="h-6 w-24 bg-slate-200 rounded mb-1"></div>
+                    <div className="h-2.5 w-20 bg-slate-100 rounded"></div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
+                  <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Trips</p>
+                  <p className="text-[18px] sm:text-[24px] lg:text-[26px] font-bold text-[#1e293b] mb-1">{performanceData.totalTrips || 0}</p>
+                  <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">Weekly window</p>
+                </div>
+                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
+                  <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Revenue</p>
+                  <p className="text-[15px] sm:text-[22px] lg:text-[26px] font-bold text-[#22c55e] mb-1">₦{(performanceData.totalRevenue || 0).toLocaleString()}</p>
+                  <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">Confirmed bookings</p>
+                </div>
+                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
+                  <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Avg Utilization</p>
+                  <p className="text-[18px] sm:text-[24px] lg:text-[26px] font-bold text-[#0ea5e9] mb-1">{performanceData.avgUtilization || 0}%</p>
+                  <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">Avg capacity used</p>
+                </div>
+                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
+                  <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Tokens</p>
+                  <p className="text-[16px] sm:text-[22px] lg:text-[26px] font-bold text-[#f59e0b] mb-1">{(performanceData.totalTokens || 0).toLocaleString()}</p>
+                  <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">10:1 conversion</p>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Chart Placeholder */}
+          {/* Chart Section */}
           <div className="bg-[#f8fafc] rounded-xl border border-slate-50 flex flex-col justify-between p-5 min-h-[160px]">
             <p className="text-[12px] font-medium text-slate-500">Daily Trips This Week</p>
-            {/* Fake chart bars area */}
-            <div className="flex-1 flex items-end justify-between px-2 mt-4 gap-2">
-              {[40, 60, 45, 80, 70, 95, 85].map((h, i) => (
-                <div key={i} className="w-full bg-[#e0f2fe] rounded-t-sm" style={{ height: `${h}%` }}></div>
-              ))}
-            </div>
+            {!performanceData ? (
+              <div className="flex-1 flex items-end justify-between px-2 mt-4 gap-2 animate-pulse">
+                {[1, 2, 3, 4, 5, 6, 7].map(i => (
+                  <div key={i} className="w-full bg-slate-100 rounded-t-sm h-8"></div>
+                ))}
+              </div>
+            ) : performanceData.dailyStats.every(s => s === 0) ? (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-[13px] text-slate-400 font-medium italic">No Data Available</p>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-end justify-between px-2 mt-4 gap-2">
+                {performanceData.dailyStats.map((count, i) => {
+                  const maxCount = Math.max(...performanceData.dailyStats, 1);
+                  const height = (count / maxCount) * 100;
+                  return (
+                    <div 
+                      key={i} 
+                      className="w-full bg-[#e0f2fe] hover:bg-[#bae6fd] rounded-t-sm transition-all duration-500 relative group" 
+                      style={{ height: `${Math.max(height, 5)}%` }}
+                    >
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-[#1e293b] text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none font-bold">
+                        {count}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {/* X-axis labels */}
             <div className="flex border-t border-slate-200 mt-2 pt-2 justify-between text-[11px] font-medium text-slate-400">
               <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
             </div>
           </div>
-
         </div>
       </div>
 
       {/* ── Bus Grid ── */}
-      <div className={clsx("grid gap-5", viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")}>
-        {MOCK_BUSES.filter(b => filterStatus === 'All' || b.status === filterStatus)
-          .filter(b => b.id.toLowerCase().includes(searchTerm.toLowerCase()))
+      {isLoading ? (
+        <div className="flex justify-center py-20 text-slate-400">Loading fleet data...</div>
+      ) : (
+        <div className={clsx("grid gap-5", viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")}>
+          {buses.filter(b => filterStatus === 'All' || b.status === filterStatus)
+          .filter(b => (b.registrationNumber || '').toLowerCase().includes(searchTerm.toLowerCase()))
           .map((bus) => (
           
           <div key={bus.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col">
@@ -231,14 +265,14 @@ export default function FleetManagement() {
             {/* Top row: ID & Badge */}
             <div className="flex justify-between items-start mb-1">
               <div className="flex items-center gap-2">
-                <h3 className="text-[18px] font-bold text-[#1e293b]">{bus.id}</h3>
+                <h3 className="text-[18px] font-bold text-[#1e293b]">{bus.registrationNumber}</h3>
                 <span className={clsx("w-2 h-2 rounded-full", getStatusIndicator(bus.status))}></span>
               </div>
               <span className={clsx("px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider", getStatusColor(bus.status))}>
                 {bus.status}
               </span>
             </div>
-            <p className="text-[12px] font-medium text-slate-400 mb-4">{bus.type}</p>
+            <p className="text-[12px] font-medium text-slate-400 mb-4">{bus.nickname || `${bus.manufacturer} ${bus.model}`}</p>
 
             {/* General Info Grid */}
             <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 mb-5">
@@ -256,7 +290,7 @@ export default function FleetManagement() {
             <div className="grid grid-cols-2 gap-4 mb-5">
               <div>
                 <span className="block text-[11px] font-semibold text-slate-400 mb-0.5">Trips Completed</span>
-                <span className="text-[15px] font-bold text-[#1e293b]">{bus.trips}</span>
+                <span className="text-[15px] font-bold text-[#1e293b]">{bus.tripsCount}</span>
               </div>
               <div>
                 <span className="block text-[11px] font-semibold text-slate-400 mb-0.5">Revenue</span>
@@ -306,7 +340,7 @@ export default function FleetManagement() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2 mt-auto">
+            <div className="flex items-center gap-2 mt-auto relative">
               <button 
                 onClick={() => {
                   setSelectedBus(bus);
@@ -316,16 +350,76 @@ export default function FleetManagement() {
               >
                 View Details
               </button>
-              <button className="px-5 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-[13px] font-semibold transition-colors">
+              <Link 
+                to={`/admin/buses/edit/${bus.id}`}
+                className="px-5 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-[13px] font-semibold transition-colors"
+              >
                 Edit
-              </button>
-              <button className="p-2 text-slate-400 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-600 rounded-xl transition-colors">
+              </Link>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpenFor(menuOpenFor === bus.id ? null : bus.id);
+                }}
+                className="p-2 text-slate-400 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-600 rounded-xl transition-colors"
+              >
                 <MoreVertical className="w-4 h-4" />
               </button>
+              
+              {/* Dropdown Menu */}
+              {menuOpenFor === bus.id && (
+                <div className="absolute right-0 bottom-12 w-52 bg-white border border-slate-100 shadow-lg rounded-xl py-2 z-10 animate-in fade-in slide-in-from-bottom-2">
+                  <button 
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setMenuOpenFor(null);
+                      try {
+                        await updateBusStatus(bus.id, 'Available');
+                        toast.success('Bus is now available');
+                      } catch (err: any) {
+                        if (err.response?.status !== 409) {
+                          toast.error(err.response?.data?.message || 'Failed to update status');
+                        }
+                      }
+                    }}
+                    className="w-full text-left px-4 py-2 text-[13px] text-emerald-600 hover:bg-emerald-50 font-medium border-b border-slate-50"
+                  >
+                    Set to Available
+                  </button>
+                  <button 
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setMenuOpenFor(null);
+                      try {
+                        await updateBusStatus(bus.id, 'Maintenance');
+                        toast.success('Bus marked for maintenance');
+                      } catch (err: any) {
+                        if (err.response?.status !== 409) {
+                          toast.error(err.response?.data?.message || 'Failed to update status');
+                        }
+                      }
+                    }}
+                    className="w-full text-left px-4 py-2 text-[13px] text-slate-600 hover:bg-slate-50 font-medium"
+                  >
+                    Mark for Maintenance
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenFor(null);
+                      setDecommissioningBus(bus);
+                    }}
+                    className="w-full text-left px-4 py-2 text-[13px] text-red-500 hover:bg-red-50 font-medium"
+                  >
+                    Decommission Bus
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
       </div>
+      )}
 
       {/* ── Bus Details Modal ── */}
       {selectedBus && (
@@ -334,8 +428,10 @@ export default function FleetManagement() {
              
              {/* Modal Header */}
              <div className="flex items-center justify-between p-6 border-b border-slate-100">
-               <h2 className="text-[20px] font-semibold text-[#1e293b]">{selectedBus.id} - Detailed View</h2>
-               <button onClick={() => setSelectedBus(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+               <h2 className="text-[20px] font-semibold text-[#1e293b]">
+                 {selectedBus.registrationNumber} - {selectedBus.nickname || `${selectedBus.manufacturer} ${selectedBus.model}`}
+               </h2>
+               <button onClick={() => { setSelectedBus(null); setShowDatePicker(false); }} className="text-slate-400 hover:text-slate-600 transition-colors">
                  <X className="w-5 h-5" />
                </button>
              </div>
@@ -363,11 +459,11 @@ export default function FleetManagement() {
                  <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                      <div>
                         <p className="text-[12px] text-[#64748b] mb-1">Bus Number</p>
-                        <p className="text-[14.5px] text-[#1e293b]">{selectedBus.id}</p>
+                        <p className="text-[14.5px] text-[#1e293b]">{selectedBus.registrationNumber}</p>
                      </div>
                      <div>
                         <p className="text-[12px] text-[#64748b] mb-1">Type</p>
-                        <p className="text-[14.5px] text-[#1e293b]">{selectedBus.type}</p>
+                        <p className="text-[14.5px] text-[#1e293b]">{selectedBus.manufacturer} {selectedBus.model}</p>
                      </div>
                      <div>
                         <p className="text-[12px] text-[#64748b] mb-1">Capacity</p>
@@ -385,6 +481,42 @@ export default function FleetManagement() {
                         <p className="text-[12px] text-[#64748b] mb-1">Last Service</p>
                         <p className="text-[14.5px] text-[#1e293b]">{selectedBus.service}</p>
                      </div>
+                     <div className="col-span-2 mt-4">
+                        <p className="text-[13px] font-bold text-[#1e293b] mb-3">Sensitive Documents</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {[
+                            { label: 'Registration Cert', url: selectedBus.vehicleRegistrationCertUrl },
+                            { label: 'Insurance Cert', url: selectedBus.insuranceCertUrl },
+                            { label: 'Roadworthiness', url: selectedBus.roadworthinessCertUrl },
+                            { label: 'Inspection Report', url: selectedBus.inspectionReportUrl },
+                            { label: 'Emission Test', url: selectedBus.emissionTestCertUrl },
+                          ].map((doc, idx) => {
+                            if (!doc.url) return null;
+                            const fullUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${doc.url}?token=${localStorage.getItem('token')}`;
+                            return (
+                              <a 
+                                key={idx}
+                                href={fullUrl}
+                                onClick={(e) => {
+                                  if (!localStorage.getItem('token')) {
+                                    e.preventDefault();
+                                    toast.error("Unauthorized: Admin access required");
+                                  }
+                                }}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 bg-[#f8fafc] border border-slate-100 rounded-xl hover:border-[#0ea5e9]/30 transition-colors group"
+                              >
+                                <div className="p-2 bg-white rounded-lg shadow-sm group-hover:text-[#0ea5e9]">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <span className="text-[13px] font-medium text-slate-600 group-hover:text-[#1e293b]">{doc.label}</span>
+                                <Download className="w-3.5 h-3.5 ml-auto text-slate-300 group-hover:text-[#0ea5e9]" />
+                              </a>
+                            );
+                          })}
+                        </div>
+                     </div>
                  </div>
                )}
 
@@ -392,7 +524,7 @@ export default function FleetManagement() {
                  <div className="grid grid-cols-2 gap-4">
                    <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50">
                      <p className="text-[12px] text-[#64748b] mb-2">Trips Completed</p>
-                     <p className="text-[24px] text-[#1e293b]">{selectedBus.trips}</p>
+                     <p className="text-[24px] text-[#1e293b]">{selectedBus.tripsCount}</p>
                    </div>
                    <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50">
                      <p className="text-[12px] text-[#64748b] mb-2">Revenue</p>
@@ -470,22 +602,120 @@ export default function FleetManagement() {
                      </div>
                    </div>
                    
-                   <button className="w-full py-2.5 bg-[#0ea5e9] text-white rounded-xl text-[14.5px] font-medium hover:bg-[#0284c7] transition-colors">
-                     Schedule Maintenance
-                   </button>
+                   <div className="relative">
+                     {showDatePicker ? (
+                       <div className="w-full p-4 border border-slate-200 rounded-xl bg-[#f8fafc] mb-2 flex items-end gap-3">
+                         <div className="flex-1">
+                           <label className="text-[12px] font-medium text-slate-500 mb-1 block">Select Date</label>
+                           <input 
+                             type="date" 
+                             className="w-full px-3 py-2 rounded-lg border border-slate-300 text-[13.5px]"
+                             value={maintenanceDate}
+                             onChange={e => setMaintenanceDate(e.target.value)}
+                           />
+                         </div>
+                         <button 
+                           onClick={async () => {
+                             if (maintenanceDate) {
+                               await updateBus(selectedBus.id, { nextServiceDue: maintenanceDate });
+                               setShowDatePicker(false);
+                               setMaintenanceDate('');
+                               // We should also ideally update the selectedBus locally but fetchFleet handles the grid
+                             }
+                           }}
+                           className="py-2 px-4 bg-[#0ea5e9] text-white rounded-lg text-[13.5px] font-medium hover:bg-[#0284c7]"
+                         >
+                           Save
+                         </button>
+                         <button 
+                           onClick={() => setShowDatePicker(false)}
+                           className="py-2 px-4 bg-white text-slate-600 border border-slate-300 rounded-lg text-[13.5px] font-medium hover:bg-slate-50"
+                         >
+                           Cancel
+                         </button>
+                       </div>
+                     ) : (
+                       <button 
+                         onClick={() => setShowDatePicker(true)}
+                         className="w-full py-2.5 bg-[#0ea5e9] text-white rounded-xl text-[14.5px] font-medium hover:bg-[#0284c7] transition-colors"
+                       >
+                         Schedule Maintenance
+                       </button>
+                     )}
+                   </div>
                  </div>
                )}
              </div>
 
              {/* Modal Footer */}
              <div className="p-5 border-t border-slate-100 flex gap-3 bg-white">
-               <button className="flex-1 py-2.5 bg-[#0ea5e9] text-white rounded-xl text-[14.5px] font-medium hover:bg-[#0284c7] transition-colors">
+               <Link 
+                 to={`/admin/fleet/report/${selectedBus.id}`}
+                 className="flex-1 py-2.5 bg-[#0ea5e9] text-white rounded-xl text-[14.5px] font-medium hover:bg-[#0284c7] transition-colors text-center block"
+               >
                  View Full Report
-               </button>
-               <button onClick={() => setSelectedBus(null)} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[14.5px] font-medium hover:bg-slate-50 transition-colors">
+               </Link>
+               <button onClick={() => { setSelectedBus(null); setShowDatePicker(false); }} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[14.5px] font-medium hover:bg-slate-50 transition-colors">
                  Close
                </button>
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Decommission Confirmation Modal ── */}
+      {decommissioningBus && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden font-sans border border-slate-100">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-[20px] font-bold text-[#1e293b] mb-2">Decommission Bus?</h3>
+              <p className="text-[14.5px] text-slate-500 mb-6">
+                Are you sure you want to permanently remove <span className="font-bold text-[#1e293b]">{decommissioningBus.registrationNumber}</span> from the active fleet? This action cannot be undone.
+              </p>
+
+              {/* Force Option */}
+              <label className="flex items-center gap-3 bg-red-50 p-4 rounded-xl mb-6 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded text-red-500 focus:ring-red-500"
+                  checked={forceDecommission}
+                  onChange={e => setForceDecommission(e.target.checked)}
+                />
+                <span className="text-[13px] font-medium text-red-700 group-hover:text-red-800">
+                  Force Decommission (Cancels all active trips)
+                </span>
+              </label>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setDecommissioningBus(null);
+                    setForceDecommission(false);
+                  }}
+                  className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[14.5px] font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={async () => {
+                    try {
+                      await deleteBus(decommissioningBus.id, forceDecommission);
+                      toast.success('Bus decommissioned successfully');
+                      setDecommissioningBus(null);
+                      setForceDecommission(false);
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.message || 'Failed to decommission bus');
+                    }
+                  }}
+                  className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-[14.5px] font-semibold hover:bg-red-600 transition-colors shadow-lg shadow-red-200"
+                >
+                  Decommission
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

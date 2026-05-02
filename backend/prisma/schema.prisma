@@ -39,14 +39,21 @@ enum PaymentMethod {
 }
 
 model User {
-  id            String        @id @default(uuid())
-  name          String
-  email         String        @unique
-  password      String
-  role          Role          @default(Passenger)
-  ticketer      Ticketer?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  password        String
+  role            Role      @default(Passenger)
+  avatar          String?
+  phone           String?
+  twoFaEnabled    Boolean   @default(false)
+  theme           String    @default("light")
+  notifEmail      Boolean   @default(true)
+  notifSms        Boolean   @default(true)
+  notifPush       Boolean   @default(true)
+  ticketer        Ticketer?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Passenger{

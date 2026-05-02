@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   CheckCircle, 
@@ -10,27 +10,76 @@ import {
   FileText,
   TrendingUp,
   History,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useAdminStore } from '../store/useAdminStore';
 
-const MOCK_COMPLETED_TRIPS = [
-  { id: 'TRP-001247', from: 'Ibadan', to: 'Oshogbo', driver: 'Emeka Nwosu', initials: 'EN', date: 'Oct 12, 2025', passengers: 35, capacity: 50, revenue: '₦315,000' },
-  { id: 'TRP-001240', from: 'Lagos',  to: 'Abuja',   driver: 'Ahmed Hassan', initials: 'AH', date: 'Oct 10, 2025', passengers: 50, capacity: 50, revenue: '₦475,000' },
-  { id: 'TRP-001235', from: 'Benin',  to: 'Lagos',   driver: 'Chioma Okafor', initials: 'CO', date: 'Oct 08, 2025', passengers: 42, capacity: 50, revenue: '₦399,000' },
-  { id: 'TRP-001230', from: 'Lagos',  to: 'Ilorin',  driver: 'Fatima Ibrahim', initials: 'FI', date: 'Oct 05, 2025', passengers: 48, capacity: 50, revenue: '₦456,000' },
-  { id: 'TRP-001225', from: 'Enugu',  to: 'Port H.', driver: 'Chukwudi Eze', initials: 'CE', date: 'Oct 01, 2025', passengers: 30, capacity: 45, revenue: '₦270,000' },
-];
+// ── Skeleton Row ──────────────────────────────────────────────────────────────
+function SkeletonRow() {
+  return (
+    <tr>
+      {[32, 48, 48, 32, 24, 32, 24].map((w, i) => (
+        <td key={i} className="px-6 py-4">
+          <div className={`h-3 rounded-md bg-gray-100 animate-pulse w-${w}`} style={{ width: `${w * 2}px` }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
 
 const CompletedTrips = () => {
+  const { trips, tripsLoading, fetchTrips, dashboardStats, fetchAdminDashboard } = useAdminStore();
+  
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterDate, setFilterDate] = useState('');
 
-  const filteredTrips = MOCK_COMPLETED_TRIPS.filter(trip => 
-    trip.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trip.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trip.to.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trip.driver.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Fetch Dashboard Stats once if null
+  useEffect(() => {
+    if (!dashboardStats) {
+      fetchAdminDashboard();
+    }
+  }, [dashboardStats, fetchAdminDashboard]);
+
+  // Fetch Trips with debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchTrips({ 
+        status: 'Completed', 
+        searchTerm: searchQuery,
+        date: filterDate || undefined
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, filterDate, fetchTrips]);
+
+  const handleExportHistory = () => {
+    if (!trips || trips.length === 0) return;
+    
+    const headers = ['Trip ID', 'Route', 'Driver', 'Date', 'Passengers', 'Capacity'];
+    const rows = trips.map(t => [
+      t.id, 
+      `${t.from} to ${t.to}`, 
+      t.driver, 
+      t.eta || '—', 
+      t.passengers.toString(), 
+      t.capacity.toString()
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'Completed_Trips_History.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="p-6 font-sans bg-[#F8FAFC] min-h-screen">
@@ -47,7 +96,10 @@ const CompletedTrips = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="bg-white text-slate-600 border border-slate-200 px-5 py-2.5 rounded-xl font-bold text-[14px] hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2">
+          <button 
+            onClick={handleExportHistory}
+            className="bg-white text-slate-600 border border-slate-200 px-5 py-2.5 rounded-xl font-bold text-[14px] hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+          >
             <Download className="w-4 h-4" />
             Export History
           </button>
@@ -57,9 +109,27 @@ const CompletedTrips = () => {
       {/* Stats Summary Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {[
-          { label: 'Total Trips', value: '142', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { label: 'Avg. Occupancy', value: '92%', icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50' },
-          { label: 'Total Revenue', value: '₦12.4M', icon: TrendingUp, color: 'text-purple-500', bg: 'bg-purple-50' },
+          { 
+            label: 'Trips Completed Today', 
+            value: dashboardStats?.completedToday ?? '—', 
+            icon: FileText, 
+            color: 'text-blue-500', 
+            bg: 'bg-blue-50' 
+          },
+          { 
+            label: 'Tickets Sold Today', 
+            value: dashboardStats?.ticketsSold ?? '—', 
+            icon: CheckCircle, 
+            color: 'text-green-500', 
+            bg: 'bg-green-50' 
+          },
+          { 
+            label: 'Total Revenue Today', 
+            value: dashboardStats?.revenueToday ?? '—', 
+            icon: TrendingUp, 
+            color: 'text-purple-500', 
+            bg: 'bg-purple-50' 
+          },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
             <div className={clsx("w-12 h-12 rounded-xl flex items-center justify-center", stat.bg)}>
@@ -67,7 +137,9 @@ const CompletedTrips = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
-              <p className="text-[20px] font-bold text-[#1E293B]">{stat.value}</p>
+              <p className="text-[20px] font-bold text-[#1E293B]">
+                {!dashboardStats ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : stat.value}
+              </p>
             </div>
           </div>
         ))}
@@ -91,10 +163,12 @@ const CompletedTrips = () => {
             <Filter className="w-4 h-4" />
             Filter
           </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[14px] font-bold hover:bg-slate-50 transition-all">
-            <Calendar className="w-4 h-4" />
-            Date Range
-          </button>
+          <input 
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[14px] font-bold hover:bg-slate-50 transition-all outline-none"
+          />
         </div>
       </div>
 
@@ -107,21 +181,31 @@ const CompletedTrips = () => {
                 <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Trip ID</th>
                 <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Route</th>
                 <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Driver</th>
-                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date/Time</th>
                 <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Passengers</th>
                 <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Revenue</th>
                 <th className="px-6 py-4 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredTrips.map((trip) => (
+              {tripsLoading && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+
+              {!tripsLoading && trips.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 font-medium">
+                    No completed trips found.
+                  </td>
+                </tr>
+              )}
+
+              {!tripsLoading && trips.map((trip) => (
                 <tr key={trip.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <Link 
                       to={`/admin/trips/report/${trip.id}`}
                       className="text-[#0EA5E9] font-bold text-[13px] hover:underline"
                     >
-                      {trip.id}
+                      {trip.id.substring(0, 12)}
                     </Link>
                   </td>
                   <td className="px-6 py-4">
@@ -139,12 +223,12 @@ const CompletedTrips = () => {
                       <span className="text-[13.5px] font-medium text-slate-600">{trip.driver}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-[13.5px] text-slate-500 font-medium">{trip.date}</td>
+                  <td className="px-6 py-4 text-[13.5px] text-slate-500 font-medium">{trip.eta || '—'}</td>
                   <td className="px-6 py-4 text-[13.5px] text-slate-700 font-bold">
                     {trip.passengers}/{trip.capacity}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-[14px] font-bold text-[#16A34A]">{trip.revenue}</span>
+                    <span className="text-[14px] font-bold text-[#16A34A]">TBD</span>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <Link 

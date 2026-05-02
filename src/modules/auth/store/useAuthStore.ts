@@ -1,11 +1,18 @@
 import { create } from 'zustand';
 import api from '../../../shared/api';
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
   role: 'Admin' | 'Ticketer' | 'Passenger';
+  avatar?: string;
+  phone?: string;
+  twoFaEnabled?: boolean;
+  theme?: 'light' | 'dark' | 'system';
+  notifEmail?: boolean;
+  notifSms?: boolean;
+  notifPush?: boolean;
 }
 
 interface AuthState {
@@ -16,6 +23,10 @@ interface AuthState {
   login: (credentials: any, rememberMe: boolean) => Promise<User>;
   logout: () => void;
   initialize: () => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  toggle2FA: (enabled: boolean) => Promise<void>;
+  updatePreferences: (prefs: Partial<Pick<User, 'theme' | 'notifEmail' | 'notifSms' | 'notifPush'>>) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -28,7 +39,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const response = await api.post('/auth/login', credentials);
       const { token, ...user } = response.data.data;
-      
       if (rememberMe) {
         localStorage.setItem('token', token);
       } else {
@@ -61,5 +71,24 @@ export const useAuthStore = create<AuthState>((set) => ({
     } else {
       set({ isInitializing: false });
     }
-  }
+  },
+
+  updateProfile: async (data) => {
+    const response = await api.patch('/users/profile', data);
+    set({ user: response.data.data });
+  },
+
+  changePassword: async (currentPassword, newPassword) => {
+    await api.patch('/users/security/password', { currentPassword, newPassword });
+  },
+
+  toggle2FA: async (enabled) => {
+    const response = await api.patch('/users/security/2fa', { enabled });
+    set({ user: response.data.data });
+  },
+
+  updatePreferences: async (prefs) => {
+    const response = await api.patch('/users/preferences', prefs);
+    set({ user: response.data.data });
+  },
 }));

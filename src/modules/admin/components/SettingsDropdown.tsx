@@ -24,6 +24,7 @@ import {
   ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 
 // ── Shared components ─────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ interface SettingsDropdownProps {
 }
 
 export default function SettingsDropdown({ isOpen, onClose }: SettingsDropdownProps) {
+  const navigate = useNavigate();
   const [notifOn, setNotifOn] = useState(true);
 
   if (!isOpen) return null;
@@ -128,8 +130,22 @@ export default function SettingsDropdown({ isOpen, onClose }: SettingsDropdownPr
           <div className="pb-2">
             {/* ACCOUNT */}
             <SectionLabel label="Account" />
-            <Row icon={User} label="Profile Settings" />
-            <Row icon={Shield} label="Account Security" />
+            <Row 
+              icon={User} 
+              label="Profile Settings" 
+              onClick={() => {
+                navigate('/account/profile');
+                onClose();
+              }}
+            />
+            <Row 
+              icon={Shield} 
+              label="Account Security" 
+              onClick={() => {
+                navigate('/account/settings');
+                onClose();
+              }}
+            />
             <Row icon={KeyRound} label="Change Password" />
             <Row
               icon={Fingerprint}
@@ -184,7 +200,15 @@ export default function SettingsDropdown({ isOpen, onClose }: SettingsDropdownPr
 
             {/* SUPPORT */}
             <SectionLabel label="Support" />
-            <Row icon={HelpCircle} label="Help Center" right={<ChevronRight size={14} />} />
+            <Row 
+              icon={HelpCircle} 
+              label="Help Center" 
+              right={<ChevronRight size={14} />} 
+              onClick={() => {
+                navigate('/account/help');
+                onClose();
+              }}
+            />
             <Row icon={FileText} label="Documentation" right={<ChevronRight size={14} />} />
             <Row icon={MessageSquare} label="Contact Support" />
             <Row icon={Bug} label="Report a Bug" />

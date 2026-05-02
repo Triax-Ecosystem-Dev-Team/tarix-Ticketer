@@ -1,30 +1,89 @@
 import { useState, useEffect } from 'react';
-import { 
-  User, Lock, Key, Shield, 
-  Globe, Bell, Sun, Mail, 
+import { useNavigate } from 'react-router-dom';
+import {
+  User, Lock, Key, Shield,
+  Globe, Bell, Sun, Mail,
   Building, CreditCard, Users, Code,
-  Activity, Info, HelpCircle, 
-  Upload, Trash2, X, DollarSign, Loader2, Save
+  Activity, Info, HelpCircle,
+  DollarSign, Loader2, Save,
+  ChevronRight,
 } from 'lucide-react';
 import api from '../../../shared/api';
+import { useAuthStore } from '../../auth/store/useAuthStore';
 
+// ─── Reusable Card ────────────────────────────────────────────────────────────
+interface SettingCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  badge?: { label: string; color: 'green' | 'slate' };
+  onClick?: () => void;
+  children?: React.ReactNode;
+}
+
+function SettingCard({ icon, title, description, badge, onClick, children }: SettingCardProps) {
+  return (
+    <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      className={`bg-white rounded-2xl p-5 border border-slate-200 flex flex-col items-start gap-3 transition-all duration-200 relative
+        ${onClick ? 'cursor-pointer hover:border-[#0ea5e9] hover:shadow-md hover:shadow-blue-50/60 active:scale-[0.99]' : ''}`}
+    >
+      {badge && (
+        <span className={`absolute top-4 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide
+          ${badge.color === 'green' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+          {badge.label}
+        </span>
+      )}
+      <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="text-[14px] font-bold text-slate-800 mb-0.5">{title}</h3>
+        <p className="text-[12.5px] text-slate-500 leading-relaxed">{description}</p>
+      </div>
+      {children && <div className="w-full">{children}</div>}
+    </div>
+  );
+}
+
+// ─── Section Heading ──────────────────────────────────────────────────────────
+function SectionHeading({ title, description, adminOnly }: { title: string; description: string; adminOnly?: boolean }) {
+  return (
+    <div className="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1 text-center sm:text-left">
+      <div>
+        <h2 className="text-[15px] font-bold text-slate-800 flex items-center gap-2">
+          {title}
+          {adminOnly && (
+            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full tracking-wide border border-amber-200">
+              Admin only
+            </span>
+          )}
+        </h2>
+        <p className="text-[12.5px] text-slate-500 mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function Settings() {
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'Admin';
 
-  // Global Pricing State
+  // Global Pricing state (Admin only)
   const [extraBaggagePrice, setExtraBaggagePrice] = useState<number>(0);
   const [isFetchingPrice, setIsFetchingPrice] = useState(true);
   const [isSavingPrice, setIsSavingPrice] = useState(false);
-  const [priceMessage, setPriceMessage] = useState<{type: 'success'|'error', text: string} | null>(null);
+  const [priceMessage, setPriceMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
+    if (!isAdmin) return;
     const fetchSettings = async () => {
       try {
         const res = await api.get('/settings');
-        if (res.data?.data) {
-          setExtraBaggagePrice(res.data.data.extraBaggagePrice);
-        }
+        if (res.data?.data) setExtraBaggagePrice(res.data.data.extraBaggagePrice);
       } catch (err) {
         console.error('Failed to fetch settings', err);
       } finally {
@@ -32,7 +91,7 @@ export default function Settings() {
       }
     };
     fetchSettings();
-  }, []);
+  }, [isAdmin]);
 
   const handleSavePricing = async () => {
     setIsSavingPrice(true);
@@ -41,492 +100,253 @@ export default function Settings() {
       const res = await api.put('/settings', { extraBaggagePrice });
       if (res.data?.data) {
         setExtraBaggagePrice(res.data.data.extraBaggagePrice);
-        setPriceMessage({ type: 'success', text: 'Pricing updated!' });
+        setPriceMessage({ type: 'success', text: 'Pricing updated successfully!' });
         setTimeout(() => setPriceMessage(null), 3000);
       }
     } catch (err) {
       console.error(err);
-      setPriceMessage({ type: 'error', text: 'Failed to update.' });
+      setPriceMessage({ type: 'error', text: 'Failed to update. Please try again.' });
     } finally {
       setIsSavingPrice(false);
     }
   };
 
+  const profilePath = isAdmin ? '/admin/account/profile' : '/account/profile';
+  const securityPath = isAdmin ? '/admin/account/security' : '/account/security';
+  const preferencesPath = isAdmin ? '/admin/account/preferences' : '/account/preferences';
+
+  const isAnyNotifEnabled = user?.notifEmail || user?.notifSms || user?.notifPush;
+
   return (
-    <div className="max-w-7xl mx-auto w-full animate-in fade-in duration-300 pb-10">
-      {/* Header Section */}
-      <div className="bg-[#0ea5e9] -mx-4 sm:-mx-6 -mt-8 px-4 sm:px-6 pt-12 pb-10 mb-8 relative">
-        <div className="flex justify-between items-start mb-1">
-          <div className="text-white/80 text-sm font-medium">
-            Dashboard &gt; Settings
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Settings</h1>
-            <p className="text-white/90 text-[15px] font-medium max-w-md leading-relaxed">
-              Manage your account and preferences
+    <div className="w-full max-w-5xl mx-auto pb-16 animate-in fade-in duration-300">
+
+      {/* ── Page Header ─────────────────────────────────────────────────────── */}
+      <div className="mb-8 pt-2">
+        {/* Breadcrumb */}
+        <nav className="flex items-center justify-center sm:justify-start gap-1.5 text-[12px] font-medium text-slate-400 mb-3">
+          <span>Dashboard</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="text-slate-700">Settings</span>
+        </nav>
+
+        <div className="flex flex-col items-center sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Settings</h1>
+            <p className="text-[13.5px] text-slate-500 mt-1">
+              Manage your account, preferences
+              {isAdmin && ', business configuration, and global pricing'}.
             </p>
           </div>
-          
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-            <Activity className="w-4 h-4 text-white" />
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-white uppercase tracking-wider leading-tight">System Status</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] animate-pulse"></div>
-                <span className="text-[12px] text-white/90">All systems operational</span>
-              </div>
+
+          {/* System Status pill */}
+          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-none mb-0.5">System Status</p>
+              <p className="text-[12px] font-semibold text-emerald-600 leading-none">All operational</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="relative z-10 pb-12 flex flex-col gap-10">
-        
-        {/* ── Account Section ── */}
-        <div>
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-[#1e293b] mb-1">Account</h2>
-            <p className="text-[13.5px] text-slate-500">Manage your account security and personal information</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <button 
-              onClick={() => setShowProfileModal(true)}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left"
-            >
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                <User className="w-5 h-5 text-[#0ea5e9]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Profile Settings</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Manage your personal information and account details.</p>
-            </button>
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left">
-              <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center mb-4">
-                <Lock className="w-5 h-5 text-[#ec4899]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Account Security</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Update password and security settings</p>
-            </button>
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left">
-              <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mb-4">
-                <Key className="w-5 h-5 text-[#f59e0b]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Change Password</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Update your account password</p>
-            </button>
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left relative">
-              <div className="absolute top-6 right-6">
-                <span className="bg-[#10b981] text-white text-[11px] font-bold px-2.5 py-1 rounded-full tracking-wide">Enabled</span>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mb-4">
-                <Shield className="w-5 h-5 text-[#10b981]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Two-Factor Authentication</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Add an extra layer of security to your account</p>
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-col gap-10">
 
-        {/* ── Preferences Section ── */}
-        <div>
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-[#1e293b] mb-1">Preferences</h2>
-            <p className="text-[13.5px] text-slate-500">Customize your dashboard experience</p>
+        {/* ── Account ─────────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeading
+            title="Account"
+            description="Manage your account security and personal information"
+          />
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <SettingCard
+              icon={<User className="w-4.5 h-4.5 text-[#0ea5e9]" />}
+              title="Profile Settings"
+              description="Update your name, email, and contact info."
+              onClick={() => navigate(profilePath)}
+            />
+            <SettingCard
+              icon={<Lock className="w-4.5 h-4.5 text-[#ec4899]" />}
+              title="Account Security"
+              description="Review login activity and security events."
+              onClick={() => navigate(securityPath)}
+            />
+            <SettingCard
+              icon={<Key className="w-4.5 h-4.5 text-[#f59e0b]" />}
+              title="Change Password"
+              description="Update your account password regularly."
+              onClick={() => navigate(securityPath)}
+            />
+            <SettingCard
+              icon={<Shield className="w-4.5 h-4.5 text-[#10b981]" />}
+              title="Two-Factor Auth"
+              description="Add an extra layer of login security."
+              badge={{ label: user?.twoFaEnabled ? 'Enabled' : 'Disabled', color: user?.twoFaEnabled ? 'green' : 'slate' }}
+              onClick={() => navigate(securityPath)}
+            />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left">
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                <Globe className="w-5 h-5 text-[#0ea5e9]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Language & Region</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Set your preferred language and regional settings</p>
-            </button>
-            <button 
-              onClick={() => setShowNotificationModal(true)}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left relative"
-            >
-              <div className="absolute top-6 right-6">
-                <span className="bg-[#10b981] text-white text-[11px] font-bold px-2.5 py-1 rounded-full tracking-wide">On</span>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center mb-4">
-                <Bell className="w-5 h-5 text-[#ec4899]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Notifications</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Manage email, SMS, and push notification preferences</p>
-            </button>
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left">
-              <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mb-4">
-                <Sun className="w-5 h-5 text-[#f59e0b]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Theme</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Choose between light, dark, or system theme</p>
-            </button>
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left">
-              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mb-4">
-                <Mail className="w-5 h-5 text-[#10b981]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Email Preferences</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Configure your email notification settings</p>
-            </button>
-          </div>
-        </div>
+        </section>
 
-        {/* ── Business Section ── */}
-        <div>
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-[#1e293b] mb-1">Business</h2>
-            <p className="text-[13.5px] text-slate-500">Configure business settings and integrations</p>
+        {/* ── Preferences ─────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeading
+            title="Preferences"
+            description="Customize your dashboard and notification experience"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <SettingCard
+              icon={<Globe className="w-4.5 h-4.5 text-[#0ea5e9]" />}
+              title="Language & Region"
+              description="Set your preferred language and locale."
+              onClick={() => navigate(preferencesPath)}
+            />
+            <SettingCard
+              icon={<Bell className="w-4.5 h-4.5 text-[#ec4899]" />}
+              title="Notifications"
+              description="Configure email, SMS and push alerts."
+              badge={{ label: isAnyNotifEnabled ? 'On' : 'Off', color: isAnyNotifEnabled ? 'green' : 'slate' }}
+              onClick={() => navigate(preferencesPath)}
+            />
+            <SettingCard
+              icon={<Sun className="w-4.5 h-4.5 text-[#f59e0b]" />}
+              title="Theme"
+              description="Switch between light, dark, or system theme."
+              onClick={() => navigate(preferencesPath)}
+            />
+            <SettingCard
+              icon={<Mail className="w-4.5 h-4.5 text-[#10b981]" />}
+              title="Email Preferences"
+              description="Control marketing and digest emails."
+              onClick={() => navigate(preferencesPath)}
+            />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left">
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                <Building className="w-5 h-5 text-[#0ea5e9]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Company Profile</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Manage your company information and branding</p>
-            </button>
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left relative">
-              <div className="absolute top-6 right-6">
-                <span className="bg-[#10b981] text-white text-[11px] font-bold px-2.5 py-1 rounded-full tracking-wide">Active</span>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center mb-4">
-                <CreditCard className="w-5 h-5 text-[#ec4899]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Billing & Subscription</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">View and manage your subscription and billing</p>
-            </button>
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left relative">
-              <div className="absolute top-6 right-6">
-                <span className="bg-slate-200 text-slate-600 text-[11px] font-bold px-2.5 py-1 rounded-full tracking-wide">3 members</span>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mb-4">
-                <Users className="w-5 h-5 text-[#f59e0b]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Team Members</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Add and manage team members and permissions</p>
-            </button>
-            <button className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start hover:border-[#0ea5e9]/30 hover:shadow-md transition-all text-left">
-              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mb-4">
-                <Code className="w-5 h-5 text-[#10b981]" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">API Keys</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">Generate and manage API keys for integrations</p>
-            </button>
-          </div>
-        </div>
+        </section>
 
-        {/* ── Global Pricing Section ── */}
-        <div>
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-[#1e293b] mb-1">Global Pricing</h2>
-            <p className="text-[13.5px] text-slate-500">Manage application-wide pricing and fees</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-start relative hover:border-[#0ea5e9]/30 hover:shadow-md transition-all">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-                <DollarSign className="w-5 h-5 text-emerald-500" />
-              </div>
-              <h3 className="text-[15px] font-bold text-[#1e293b] mb-1.5">Extra Baggage Price</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed mb-4">Set the base price for one unit of extra baggage.</p>
-              
-              <div className="w-full mt-auto relative">
-                <div className="relative mb-3">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-[14px]">₦</span>
-                  <input 
-                    type="number" 
-                    value={extraBaggagePrice}
-                    onChange={(e) => setExtraBaggagePrice(Number(e.target.value))}
+        {/* ── Business (Admin only) ────────────────────────────────────────────── */}
+        {isAdmin && (
+          <section>
+            <SectionHeading
+              title="Business"
+              description="Configure company settings and integrations"
+              adminOnly
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <SettingCard
+                icon={<Building className="w-4.5 h-4.5 text-[#0ea5e9]" />}
+                title="Company Profile"
+                description="Manage company information and branding."
+              />
+              <SettingCard
+                icon={<CreditCard className="w-4.5 h-4.5 text-[#ec4899]" />}
+                title="Billing & Subscription"
+                description="View and manage your subscription plan."
+                badge={{ label: 'Active', color: 'green' }}
+              />
+              <SettingCard
+                icon={<Users className="w-4.5 h-4.5 text-[#f59e0b]" />}
+                title="Team Members"
+                description="Add and manage team roles and permissions."
+                badge={{ label: '3 members', color: 'slate' }}
+              />
+              <SettingCard
+                icon={<Code className="w-4.5 h-4.5 text-[#10b981]" />}
+                title="API Keys"
+                description="Generate keys for third-party integrations."
+              />
+            </div>
+          </section>
+        )}
+
+        {/* ── Global Pricing (Admin only) ──────────────────────────────────────── */}
+        {isAdmin && (
+          <section>
+            <SectionHeading
+              title="Global Pricing"
+              description="Manage application-wide fees applied at checkout"
+              adminOnly
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <SettingCard
+                icon={<DollarSign className="w-4.5 h-4.5 text-emerald-500" />}
+                title="Extra Baggage Price"
+                description="Base price charged per unit of extra baggage."
+              >
+                <div className="mt-1 space-y-2">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">₦</span>
+                    <input
+                      type="number"
+                      value={extraBaggagePrice}
+                      onChange={(e) => setExtraBaggagePrice(Number(e.target.value))}
+                      disabled={isFetchingPrice || isSavingPrice}
+                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm
+                                 focus:outline-none focus:border-[#0ea5e9] focus:bg-white transition-all
+                                 font-medium text-slate-700 disabled:opacity-60"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSavePricing}
                     disabled={isFetchingPrice || isSavingPrice}
-                    className="w-full pl-7 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:bg-white transition-all font-medium text-slate-700"
-                  />
+                    className="w-full py-2 bg-[#0ea5e9] text-white rounded-xl text-[13px] font-bold
+                               hover:bg-[#0284c7] transition-all flex items-center justify-center gap-2
+                               disabled:opacity-60 shadow-sm shadow-blue-100"
+                  >
+                    {isSavingPrice ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    Save
+                  </button>
+                  {priceMessage && (
+                    <p className={`text-[11.5px] font-semibold text-center ${
+                      priceMessage.type === 'success' ? 'text-emerald-600' : 'text-red-500'
+                    }`}>
+                      {priceMessage.text}
+                    </p>
+                  )}
                 </div>
-                
-                <button 
-                  onClick={handleSavePricing}
-                  disabled={isFetchingPrice || isSavingPrice}
-                  className="w-full py-2 bg-[#0ea5e9] text-white rounded-xl text-[13px] font-bold hover:bg-[#0284c7] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-                >
-                  {isSavingPrice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Save Changes
-                </button>
-                
-                {priceMessage && (
-                  <p className={`text-[12px] mt-2 font-medium text-center ${priceMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {priceMessage.text}
-                  </p>
-                )}
-              </div>
+              </SettingCard>
             </div>
-          </div>
-        </div>
+          </section>
+        )}
 
-        {/* ── System Information Footer ── */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 mt-4">
-          <h2 className="text-lg font-bold text-[#1e293b] mb-6">System Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex items-start gap-4">
-              <div className="p-2.5 bg-blue-50 rounded-xl">
-                <Info className="w-5 h-5 text-[#0ea5e9]" />
+        {/* ── System Information ───────────────────────────────────────────────── */}
+        <section>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 className="text-[15px] font-bold text-slate-800 mb-5">System Information</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
+                  <Info className="w-4 h-4 text-[#0ea5e9]" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-slate-700 mb-0.5">Version</p>
+                  <p className="text-[12.5px] text-slate-500">TARIX Manager v2.0.0</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[14px] font-bold text-[#1e293b] mb-1">Version</p>
-                <p className="text-[13px] text-slate-500">TARIX Manager v2.0.0</p>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-emerald-50 rounded-lg flex-shrink-0">
+                  <Activity className="w-4 h-4 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-slate-700 mb-0.5">System Status</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <p className="text-[12.5px] text-emerald-600 font-medium">Operational</p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="p-2.5 bg-green-50 rounded-xl">
-                <Activity className="w-5 h-5 text-[#10b981]" />
-              </div>
-              <div>
-                <p className="text-[14px] font-bold text-[#1e293b] mb-1">System Status</p>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]"></div>
-                  <p className="text-[13px] text-[#10b981]">Operational</p>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-red-50 rounded-lg flex-shrink-0">
+                  <HelpCircle className="w-4 h-4 text-red-400" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-slate-700 mb-0.5">Support</p>
+                  <a href="#" className="text-[12.5px] text-[#0ea5e9] hover:underline font-medium">
+                    Contact Support
+                  </a>
                 </div>
               </div>
             </div>
-            <div className="flex items-start gap-4">
-              <div className="p-2.5 bg-red-50 rounded-xl">
-                <HelpCircle className="w-5 h-5 text-[#ef4444]" />
-              </div>
-              <div>
-                <p className="text-[14px] font-bold text-[#1e293b] mb-1">Support</p>
-                <a href="#" className="text-[13px] text-[#0ea5e9] hover:underline font-medium">Contact Support</a>
-              </div>
-            </div>
           </div>
-        </div>
+        </section>
       </div>
-
-      {/* ── Modals ── */}
-      
-      {/* Profile Settings Modal */}
-      {showProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col font-sans max-h-[90vh]">
-            
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
-              <h2 className="text-xl font-bold text-[#1e293b]">Profile Settings</h2>
-              <button onClick={() => setShowProfileModal(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-600 mb-4">Profile Picture</label>
-                  <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-full bg-[#0ea5e9] flex items-center justify-center text-white text-2xl font-bold shadow-sm">
-                      JM
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#0ea5e9] text-[#0ea5e9] rounded-xl text-[14px] font-medium hover:bg-blue-50 transition-colors">
-                        <Upload className="w-4 h-4" /> Change Picture
-                      </button>
-                      <button className="flex items-center gap-2 px-4 py-2 bg-white text-[#ef4444] rounded-xl text-[14px] font-medium hover:bg-red-50 transition-colors">
-                        <Trash2 className="w-4 h-4" /> Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-[13.5px] font-medium text-[#1e293b] mb-2">Full Name <span className="text-[#ef4444]">*</span></label>
-                    <input type="text" defaultValue="John Manager" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-[13.5px] font-medium text-[#1e293b] mb-2">Email <span className="text-[#ef4444]">*</span></label>
-                    <input type="email" defaultValue="john@tarix.com" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-[13.5px] font-medium text-[#1e293b] mb-2">Phone Number</label>
-                    <input type="tel" defaultValue="+234 801 234 5678" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all text-slate-500" />
-                  </div>
-                  <div>
-                    <label className="block text-[13.5px] font-medium text-[#1e293b] mb-2">Company Name</label>
-                    <input type="text" defaultValue="TARIX Transport" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-[13.5px] font-medium text-[#1e293b] mb-2">Country <span className="text-[#ef4444]">*</span></label>
-                    <select className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all">
-                      <option>Nigeria</option>
-                      <option>Ghana</option>
-                      <option>Kenya</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[13.5px] font-medium text-[#1e293b] mb-2">State/Region <span className="text-[#ef4444]">*</span></label>
-                    <select className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all">
-                      <option>Lagos</option>
-                      <option>Abuja</option>
-                      <option>Rivers</option>
-                    </select>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-[13.5px] font-medium text-[#1e293b] mb-2">City</label>
-                  <select className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all">
-                    <option>Lagos</option>
-                    <option>Ikeja</option>
-                    <option>Victoria Island</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 sticky bottom-0">
-              <button onClick={() => setShowProfileModal(false)} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[14px] font-bold hover:bg-slate-50 transition-colors">
-                Cancel
-              </button>
-              <button className="flex items-center gap-2 px-6 py-2.5 bg-[#0ea5e9] text-white rounded-xl text-[14px] font-bold hover:bg-[#0284c7] transition-colors shadow-sm">
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Notification Preferences Modal */}
-      {showNotificationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col font-sans max-h-[90vh]">
-            
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
-              <h2 className="text-xl font-bold text-[#1e293b]">Notification Preferences</h2>
-              <button onClick={() => setShowNotificationModal(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto">
-              <div className="space-y-8">
-                
-                {/* Email Notifications */}
-                <div>
-                  <div className="mb-4">
-                    <h3 className="text-[15px] font-bold text-[#1e293b]">Email Notifications</h3>
-                    <p className="text-[13px] text-slate-500">Receive email updates about your account</p>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#1e293b]">Trip Updates</p>
-                        <p className="text-[13px] text-slate-500">Get notified about trip status changes</p>
-                      </div>
-                      <div className="relative inline-block w-11 h-6 cursor-pointer rounded-full bg-[#0ea5e9]">
-                        <span className="absolute top-[2px] left-[22px] bg-white w-5 h-5 rounded-full transition-all"></span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#1e293b]">Revenue Reports</p>
-                        <p className="text-[13px] text-slate-500">Daily/weekly revenue summaries</p>
-                      </div>
-                      <div className="relative inline-block w-11 h-6 cursor-pointer rounded-full bg-[#0ea5e9]">
-                        <span className="absolute top-[2px] left-[22px] bg-white w-5 h-5 rounded-full transition-all"></span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#1e293b]">Driver Updates</p>
-                        <p className="text-[13px] text-slate-500">Notifications about driver activities</p>
-                      </div>
-                      <div className="relative inline-block w-11 h-6 cursor-pointer rounded-full bg-[#0ea5e9]">
-                        <span className="absolute top-[2px] left-[22px] bg-white w-5 h-5 rounded-full transition-all"></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-slate-100"></div>
-
-                {/* In-App Notifications */}
-                <div>
-                  <div className="mb-4">
-                    <h3 className="text-[15px] font-bold text-[#1e293b]">In-App Notifications</h3>
-                    <p className="text-[13px] text-slate-500">Receive notifications within the dashboard</p>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#1e293b]">Critical Alerts</p>
-                        <p className="text-[13px] text-slate-500">System errors and critical issues</p>
-                      </div>
-                      <div className="relative inline-block w-11 h-6 cursor-pointer rounded-full bg-[#0ea5e9]">
-                        <span className="absolute top-[2px] left-[22px] bg-white w-5 h-5 rounded-full transition-all"></span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#1e293b]">Trip Alerts</p>
-                        <p className="text-[13px] text-slate-500">Real-time trip notifications</p>
-                      </div>
-                      <div className="relative inline-block w-11 h-6 cursor-pointer rounded-full bg-[#0ea5e9]">
-                        <span className="absolute top-[2px] left-[22px] bg-white w-5 h-5 rounded-full transition-all"></span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#1e293b]">Marketing Updates</p>
-                        <p className="text-[13px] text-slate-500">New features and promotions</p>
-                      </div>
-                      <div className="relative inline-block w-11 h-6 cursor-pointer rounded-full bg-slate-200">
-                        <span className="absolute top-[2px] left-[2px] bg-white w-5 h-5 rounded-full transition-all shadow-sm"></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-slate-100"></div>
-
-                {/* SMS Notifications */}
-                <div>
-                  <div className="mb-4">
-                    <h3 className="text-[15px] font-bold text-[#1e293b]">SMS Notifications</h3>
-                    <p className="text-[13px] text-slate-500">Receive SMS alerts to your phone</p>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#1e293b]">Urgent Alerts</p>
-                        <p className="text-[13px] text-slate-500">Critical system alerts via SMS</p>
-                      </div>
-                      <div className="relative inline-block w-11 h-6 cursor-pointer rounded-full bg-[#0ea5e9]">
-                        <span className="absolute top-[2px] left-[22px] bg-white w-5 h-5 rounded-full transition-all"></span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#1e293b]">Trip Confirmations</p>
-                        <p className="text-[13px] text-slate-500">Trip booking confirmations</p>
-                      </div>
-                      <div className="relative inline-block w-11 h-6 cursor-pointer rounded-full bg-[#0ea5e9]">
-                        <span className="absolute top-[2px] left-[22px] bg-white w-5 h-5 rounded-full transition-all"></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 sticky bottom-0">
-              <button onClick={() => setShowNotificationModal(false)} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[14px] font-bold hover:bg-slate-50 transition-colors">
-                Cancel
-              </button>
-              <button className="flex items-center gap-2 px-6 py-2.5 bg-[#0ea5e9] text-white rounded-xl text-[14px] font-bold hover:bg-[#0284c7] transition-colors shadow-sm">
-                Save Preferences
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

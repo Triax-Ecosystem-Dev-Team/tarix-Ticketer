@@ -15,4 +15,5 @@ export { default as TripOverview } from './views/TripOverview';
 export { default as TripDetails } from './views/TripDetails';
 export { default as TripReport } from './views/TripReport';
 export { default as CompletedTrips } from './views/CompletedTrips';
+export { default as BusReport } from './views/BusReport';
 

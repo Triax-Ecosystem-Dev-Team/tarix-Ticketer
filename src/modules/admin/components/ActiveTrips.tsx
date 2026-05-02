@@ -1,25 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import clsx from 'clsx';
 
-// ── 🔌 MOCK API — swap body with fetch("/api/trips/active") when ready ───────
-async function fetchActiveTrips() {
-  await new Promise(r => setTimeout(r, 1100));
-  return {
-    total: 13,
-    trips: [
-      { id: 'TRP-001245', from: 'Lagos',  to: 'Ibadan',  driver: 'Ahmed Hassan',   initials: 'AH', bus: 'BUS-045', passengers: 42, capacity: 50, eta: '2:30 PM', status: 'En Route' },
-      { id: 'TRP-001246', from: 'Lagos',  to: 'Benin',   driver: 'Chioma Okafor',  initials: 'CO', bus: 'BUS-032', passengers: 48, capacity: 50, eta: '3:15 PM', status: 'En Route' },
-      { id: 'TRP-001247', from: 'Ibadan', to: 'Oshogbo', driver: 'Emeka Nwosu',    initials: 'EN', bus: 'BUS-018', passengers: 35, capacity: 50, eta: '1:45 PM', status: 'Completed' },
-      { id: 'TRP-001248', from: 'Lagos',  to: 'Abuja',   driver: 'Fatima Ibrahim', initials: 'FI', bus: 'BUS-027', passengers: 50, capacity: 50, eta: '5:00 PM', status: 'En Route' },
-      { id: 'TRP-001249', from: 'Benin',  to: 'Lagos',   driver: 'Chukwudi Eze',   initials: 'CE', bus: 'BUS-013', passengers: 38, capacity: 50, eta: '4:20 PM', status: 'En Route' },
-    ],
-  };
-}
-
-type TripData = Awaited<ReturnType<typeof fetchActiveTrips>>;
-type Trip = TripData['trips'][number];
+import { useAdminStore, type ActiveTrip } from '../store/useAdminStore';
 
 // ── Skeleton row ─────────────────────────────────────────────────────────────
 
@@ -70,25 +54,17 @@ function EnRouteBadge() {
 // ── ActiveTrips ───────────────────────────────────────────────────────────────
 
 const ActiveTrips = () => {
-  const [data,    setData]    = useState<TripData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const { activeTrips: data, isLoading: loading, error, fetchAdminDashboard } = useAdminStore();
   const [visible, setVisible] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null); setVisible(false);
-    try {
-      const res = await fetchActiveTrips();
-      setData(res);
+  useEffect(() => {
+    if (!loading && data) {
       setTimeout(() => setVisible(true), 60);
-    } catch (e) {
-      setError((e as Error).message || 'Failed to load trips');
-    } finally {
-      setLoading(false);
+    } else {
+      setVisible(false);
     }
-  }, []);
+  }, [loading, data]);
 
-  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -131,7 +107,7 @@ const ActiveTrips = () => {
 
           <tbody className="divide-y divide-gray-50">
             {/* Loading skeletons */}
-            {loading && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+            {(loading || !data) && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
 
             {/* Error */}
             {error && (
@@ -139,7 +115,7 @@ const ActiveTrips = () => {
                 <td colSpan={7} className="px-4 py-8 text-center text-red-500 text-sm">
                   ⚠️ {error}
                   <button
-                    onClick={load}
+                    onClick={fetchAdminDashboard}
                     className="ml-3 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                   >
                     Retry
@@ -149,7 +125,7 @@ const ActiveTrips = () => {
             )}
 
             {/* Trip rows */}
-            {!loading && !error && data?.trips.map((trip: Trip, i) => (
+            {!loading && !error && data && data.trips.map((trip: ActiveTrip, i) => (
               <tr
                 key={trip.id}
                 className="hover:bg-gray-50/70 transition-colors"

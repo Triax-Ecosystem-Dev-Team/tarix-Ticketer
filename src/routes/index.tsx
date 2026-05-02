@@ -16,6 +16,10 @@ import FindTicket from '../modules/ticketer/views/FindTicket';
 // Placeholder components
 import BusStatusPage from '../modules/ticketer/views/BusStatusPage';
 import PassengerList from '../modules/ticketer/views/PassengerList';
+import Profile from '../shared/views/account/Profile';
+import Help from '../shared/views/account/Help';
+import Security from '../shared/views/account/Security';
+import Preferences from '../shared/views/account/Preferences';
 
 // Admin Module
 import {
@@ -35,7 +39,8 @@ import {
   TripOverview,
   TripDetails,
   TripReport,
-  CompletedTrips
+  CompletedTrips,
+  BusReport
 } from '../modules/admin/AdminModule';
 
 const OverviewPage = () => (
@@ -133,6 +138,26 @@ export const router = createBrowserRouter([
             element: <BookingPage />,
           },
           {
+            path: 'account/profile',
+            element: <Profile />,
+          },
+          {
+            path: 'account/settings',
+            element: <Settings />,
+          },
+          {
+            path: 'account/security',
+            element: <Security />,
+          },
+          {
+            path: 'account/preferences',
+            element: <Preferences />,
+          },
+          {
+            path: 'account/help',
+            element: <Help />,
+          },
+          {
             path: '*',
             element: <NotFoundPage />,
           },
@@ -181,6 +206,14 @@ export const router = createBrowserRouter([
         element: <AddBus />,
       },
       {
+        path: 'buses/edit/:id',
+        element: <AddBus />,
+      },
+      {
+        path: 'fleet/report/:id',
+        element: <BusReport />,
+      },
+      {
         path: 'drivers',
         element: <DriverManagement />,
       },
@@ -211,6 +244,26 @@ export const router = createBrowserRouter([
       {
         path: 'team',
         element: <MemberManager />,
+      },
+      {
+        path: 'account/profile',
+        element: <Profile />,
+      },
+      {
+        path: 'account/settings',
+        element: <Settings />,
+      },
+      {
+        path: 'account/security',
+        element: <Security />,
+      },
+      {
+        path: 'account/preferences',
+        element: <Preferences />,
+      },
+      {
+        path: 'account/help',
+        element: <Help />,
       },
         ],
       },

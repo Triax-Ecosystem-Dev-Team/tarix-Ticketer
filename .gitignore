@@ -27,3 +27,4 @@ backend/src
 .gitignore
 backend/frontend_integration_guide.md
 details.txt
+uploads/

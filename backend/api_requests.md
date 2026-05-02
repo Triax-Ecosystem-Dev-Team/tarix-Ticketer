@@ -141,3 +141,103 @@ curl -X PUT http://localhost:5000/api/settings \
     "extraBaggagePrice": 2500
   }'
 ```
+
+---
+
+## 5. User Profile & Settings (Authenticated)
+
+### Update Profile
+*Update user personal details like name, phone, and avatar.*
+```bash
+curl -X PATCH http://localhost:5000/api/users/profile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -d '{
+    "name": "Jane Doe",
+    "phone": "08012345678",
+    "avatar": "https://example.com/avatar.jpg"
+  }'
+```
+
+### Change Password
+*Update account password.*
+```bash
+curl -X PATCH http://localhost:5000/api/users/security/password \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -d '{
+    "currentPassword": "password123",
+    "newPassword": "newpassword123"
+  }'
+```
+
+### Toggle Two-Factor Authentication (2FA)
+*Enable or disable 2FA for the user account.*
+```bash
+curl -X PATCH http://localhost:5000/api/users/security/2fa \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -d '{
+    "enabled": true
+  }'
+```
+
+### Update Preferences
+*Update user theme and notification preferences.*
+```bash
+curl -X PATCH http://localhost:5000/api/users/preferences \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -d '{
+    "theme": "dark",
+    "notifEmail": true,
+    "notifSms": false,
+    "notifPush": true
+  }'
+```
+
+---
+
+## 6. Fleet Management (Admin Only)
+
+### Get Fleet Overview & List
+*Returns fleet statistics (Total, Available, Maintenance) and the full list of buses.*
+```bash
+curl -X GET http://localhost:5000/api/fleet \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+```
+
+### Register New Bus Asset (Multipart/FormData)
+*Note: This request uses `multipart/form-data` to handle file streams for certificates and photos.*
+```bash
+curl -X POST http://localhost:5000/api/fleet \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -F "registrationNumber=BUS-003" \
+  -F "nickname=Express King" \
+  -F "manufacturer=Mercedes" \
+  -F "model=Travego" \
+  -F "year=2023" \
+  -F "totalCapacity=50" \
+  -F "availableSeats=50" \
+  -F "transmissionType=Automatic" \
+  -F "maintenanceStatus=Excellent" \
+  -F "amenities=[\"WiFi\", \"Air Conditioning\"]" \
+  -F "vehicleRegistrationCert=@/path/to/reg_cert.pdf" \
+  -F "busPhotos=@/path/to/bus_front.jpg" \
+  -F "busPhotos=@/path/to/bus_side.jpg"
+```
+
+### Get Weekly Fleet Performance
+*Returns revenue, trip counts, and daily utilization trends.*
+```bash
+curl -X GET http://localhost:5000/api/fleet/performance \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+```
+
+### Download Protected Document
+*Serves a bus document only if a valid Admin token is provided.*
+```bash
+curl -X GET http://localhost:5000/api/fleet/documents/sample_cert.pdf \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  --output downloaded_cert.pdf
+```

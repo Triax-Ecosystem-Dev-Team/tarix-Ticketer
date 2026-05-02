@@ -1,7 +1,20 @@
-import { useState } from 'react';
-import { Bus, Settings, FileText, CheckCircle, ChevronRight, UploadCloud } from 'lucide-react';
+import { useState, useEffect, memo, useRef } from 'react';
+import { 
+  Bus, 
+  Settings, 
+  FileText, 
+  CheckCircle, 
+  ChevronRight, 
+  UploadCloud, 
+  X, 
+  Loader2, 
+  RefreshCcw 
+} from 'lucide-react';
 import clsx from 'clsx';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useFleetStore } from '../store/useFleetStore';
+import { useBusFormStore } from '../store/useBusFormStore';
+import toast from 'react-hot-toast';
 
 const STEPS = [
   { id: 1, title: 'Basic Information', description: 'Bus details', icon: Bus },
@@ -10,55 +23,322 @@ const STEPS = [
   { id: 4, title: 'Review', description: 'Confirm details', icon: CheckCircle },
 ];
 
+// ── OPTIMIZED HELPER COMPONENTS (Defined outside to prevent recreation on every render) ──
+const FormInput = memo(({ label, placeholder, field, type = 'text', required, subLabel }: any) => {
+  const value = useBusFormStore(s => (s.formData as any)[field] || '');
+  const setField = useBusFormStore(s => s.setFormData);
+
+  return (
+    <div className="w-full">
+      <label htmlFor={field} className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input 
+        id={field}
+        name={field}
+        type={type} 
+        placeholder={placeholder}
+        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
+        value={value as string}
+        onChange={e => setField({ [field]: e.target.value })}
+      />
+      {subLabel && <p className="text-[11px] text-slate-400 mt-1.5">{subLabel}</p>}
+    </div>
+  );
+});
+
+const FormSelect = memo(({ label, options, field, required }: any) => {
+  const value = useBusFormStore(s => (s.formData as any)[field] || '');
+  const setField = useBusFormStore(s => s.setFormData);
+
+  return (
+    <div className="w-full">
+      <label htmlFor={field} className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <select 
+          id={field}
+          name={field}
+          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600 appearance-none bg-white"
+          value={value as string}
+          onChange={e => setField({ [field]: e.target.value })}
+        >
+          <option value="" disabled>Select {label.toLowerCase()}</option>
+          {options.map((opt: string) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+          <ChevronRight className="w-4 h-4 rotate-90" />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const FileUpload = memo(({ 
+  label, 
+  required, 
+  subLabel, 
+  field 
+}: { 
+  label: string, 
+  required?: boolean, 
+  subLabel?: string,
+  field: any
+}) => {
+  const file = useBusFormStore(s => (s.formData as any)[field]);
+  const busPhotos = useBusFormStore(s => s.formData.busPhotos);
+  const setFormData = useBusFormStore(s => s.setFormData);
+
+  const validateFile = (file: File, type: 'pdf' | 'image'): string | null => {
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) return `"${file.name}" is too large. Max limit is 5MB.`;
+    if (type === 'pdf' && file.type !== 'application/pdf') return `"${file.name}" must be a PDF file.`;
+    if (type === 'image' && !file.type.startsWith('image/')) return `"${file.name}" must be an image (JPG/PNG/WEBP).`;
+    return null;
+  };
+
+  const handleFiles = (files: FileList) => {
+    if (!files || files.length === 0) return;
+
+    if (field === 'busPhotos') {
+      const newFiles = Array.from(files);
+      if (busPhotos.length + newFiles.length > 10) {
+        toast.error("You can only upload a maximum of 10 photos.");
+        return;
+      }
+
+      for (const f of newFiles) {
+        const error = validateFile(f, 'image');
+        if (error) {
+          toast.error(error);
+          return;
+        }
+      }
+
+      const newPreviews = newFiles.map(f => URL.createObjectURL(f));
+      
+      setFormData((prev: any) => ({
+        busPhotos: [...(prev.busPhotos || []), ...newFiles],
+        previews: [...(prev.previews || []), ...newPreviews]
+      }));
+      
+      toast.success(`${newFiles.length} photo(s) added to gallery`);
+    } else {
+      // For certificates, allow both PDF and Image (some users take photos of docs)
+      const isImage = files[0].type.startsWith('image/');
+      const error = validateFile(files[0], isImage ? 'image' : 'pdf');
+      
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      
+      setFormData({ [field]: files[0] });
+      toast.success(`${label} attached`);
+    }
+  };
+
+  const removeFile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFormData({ [field]: null });
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-1 mb-2">
+        <label className="text-[13px] font-semibold text-slate-700">{label}</label>
+        {required && <span className="text-red-500 text-[13px]">*</span>}
+      </div>
+      {subLabel && <p className="text-[11px] text-slate-500 mb-2">{subLabel}</p>}
+      
+      <div 
+        className={clsx(
+          "w-full border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer group transition-colors relative",
+          file 
+            ? "border-[#22c55e]/50 bg-[#f0fdf4]/50" 
+            : "border-[#0ea5e9]/30 bg-[#f0f9ff]/50 hover:bg-[#f0f9ff]"
+        )}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
+        }}
+        onClick={() => document.getElementById(`file-upload-${field}`)?.click()}
+      >
+        <input 
+          type="file" 
+          id={`file-upload-${field}`}
+          className="hidden" 
+          accept={field === 'busPhotos' ? "image/*" : "application/pdf,image/*"}
+          multiple={field === 'busPhotos'}
+          onChange={(e) => e.target.files && handleFiles(e.target.files)}
+        />
+
+        {field === 'busPhotos' && Array.isArray(busPhotos) && busPhotos.length > 0 ? (
+          <div className="flex flex-col items-center text-center">
+            <div className="w-10 h-10 bg-[#f0fdf4] rounded-full flex items-center justify-center mb-3 text-[#22c55e]">
+              <UploadCloud className="w-5 h-5" />
+            </div>
+            <p className="text-[13px] font-bold text-slate-700 mb-1">{busPhotos.length} photos added</p>
+            <p className="text-[12px] text-slate-500">Click or drag to add more</p>
+          </div>
+        ) : file && !(Array.isArray(file)) ? (
+          <div className="flex flex-col items-center text-center">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm text-[#22c55e]">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <p className="text-[13px] font-bold text-slate-700 mb-1 truncate max-w-[250px]">{(file as File).name}</p>
+            <p className="text-[11px] text-slate-500 mb-3">{((file as File).size / (1024 * 1024)).toFixed(2)} MB</p>
+            <button onClick={removeFile} className="text-[12px] font-semibold text-red-500 hover:text-red-600">Remove File</button>
+          </div>
+        ) : (
+          <>
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm group-hover:scale-105 transition-transform text-[#0ea5e9]">
+              <UploadCloud className="w-5 h-5" />
+            </div>
+            <p className="text-[13px] font-medium text-slate-700 mb-1">
+              {field === 'busPhotos' ? 'Upload bus photos' : 'Drag and drop your file here'}
+            </p>
+            <p className="text-[12px] text-slate-500 mb-3">or click to browse</p>
+            <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
+              {field === 'busPhotos' ? 'JPG, PNG, WEBP (Max 10 photos)' : 'PDF, JPG, PNG (Max 5MB)'}
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
 export default function AddBus() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    // Bus Identification
-    registrationNumber: '',
-    nickname: '',
-    chassisNumber: '',
-    engineNumber: '',
-    // Ownership
-    ownerName: '',
-    ownerPhone: '',
-    registrationDate: '',
-    insuranceProvider: '',
-    insuranceExpiry: '',
-    // Vehicle Details
-    manufacturer: '',
-    model: '',
-    year: '',
-    color: '',
-    fuelType: '',
-    // Step 2: Specifications
-    totalCapacity: '',
-    availableSeats: '',
-    wheelchairSeats: '',
-    busLength: '',
-    busWidth: '',
-    busHeight: '',
-    currentMileage: '',
-    lastServiceDate: '',
-    nextServiceDue: '',
-    engineCapacity: '',
-    maintenanceStatus: '',
-    transmissionType: '',
-    amenities: [] as string[],
-    // Step 3: Documentation
-    vehicleRegistrationCert: null,
-    insuranceCert: null,
-    roadworthinessCert: null,
-    inspectionReport: null,
-    emissionTestCert: null,
-    busPhotos: null,
-  });
+  const { formData, setFormData, clearDraft } = useBusFormStore();
+  
+  const previews = useBusFormStore(s => s.formData.previews);
+  const previewsRef = useRef<string[]>([]);
 
-  const handleNext = () => {
+  useEffect(() => {
+    previewsRef.current = previews;
+  }, [previews]);
+
+  useEffect(() => {
+    return () => {
+      // Safety check: ensure previewsRef.current exists before cleanup
+      if (previewsRef.current) {
+        previewsRef.current.forEach(url => URL.revokeObjectURL(url));
+      }
+    };
+  }, []);
+
+  const { id } = useParams();
+  const { registerBus, updateBus, getBusById, isLoading } = useFleetStore();
+
+  useEffect(() => {
+    if (id) {
+      getBusById(id).then(bus => {
+        if (bus) {
+          setFormData(prev => ({
+            ...prev,
+            ...bus,
+            registrationNumber: bus.registrationNumber || '',
+            nickname: bus.nickname || '',
+            chassisNumber: bus.chassisNumber || '',
+            engineNumber: bus.engineNumber || '',
+            ownerName: bus.ownerName || '',
+            ownerPhone: bus.ownerPhone || '',
+            manufacturer: bus.manufacturer || '',
+            model: bus.model || '',
+            year: bus.year || '',
+            color: bus.color || '',
+            fuelType: bus.fuelType || '',
+            totalCapacity: bus.totalCapacity || '',
+            availableSeats: bus.availableSeats || '',
+            maintenanceStatus: bus.maintenanceStatus || '',
+            transmissionType: bus.transmissionType || '',
+            amenities: bus.amenities || [],
+            registrationDate: bus.registrationDate ? new Date(bus.registrationDate).toISOString().split('T')[0] : '',
+            insuranceExpiry: bus.insuranceExpiry ? new Date(bus.insuranceExpiry).toISOString().split('T')[0] : '',
+            lastServiceDate: bus.lastServiceDate ? new Date(bus.lastServiceDate).toISOString().split('T')[0] : '',
+            nextServiceDue: bus.nextServiceDue ? new Date(bus.nextServiceDue).toISOString().split('T')[0] : '',
+          }));
+        }
+      });
+    }
+  }, [id, getBusById]);
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB client-side pre-check
+
+  const validateFile = (file: File, type: 'pdf' | 'image'): string | null => {
+    if (file.size > MAX_FILE_SIZE) return `"${file.name}" is too large. Max limit is 5MB.`;
+    if (type === 'pdf' && file.type !== 'application/pdf') return `"${file.name}" must be a PDF file.`;
+    if (type === 'image' && !file.type.startsWith('image/')) return `"${file.name}" must be an image (JPG/PNG/WEBP).`;
+    return null;
+  };
+
+  const validateStep = () => {
+    if (currentStep === 1) {
+      const required = ['registrationNumber', 'nickname', 'chassisNumber', 'engineNumber', 'ownerName', 'ownerPhone', 'registrationDate', 'insuranceProvider', 'insuranceExpiry', 'manufacturer', 'model', 'year', 'color', 'fuelType'];
+      return required.every(field => formData[field as keyof typeof formData]);
+    }
+    if (currentStep === 2) {
+      const required = ['totalCapacity', 'availableSeats', 'currentMileage', 'lastServiceDate', 'nextServiceDue', 'maintenanceStatus', 'transmissionType'];
+      return required.every(field => formData[field as keyof typeof formData]);
+    }
+    if (currentStep === 3) {
+      const required = ['vehicleRegistrationCert', 'insuranceCert', 'roadworthinessCert', 'busPhotos'];
+      return required.every(field => formData[field as keyof typeof formData]);
+    }
+    return true;
+  };
+
+
+
+  const handleNext = async () => {
+    if (!validateStep()) {
+      toast.error(
+        currentStep === 3
+          ? 'Please upload all required documents before continuing.'
+          : 'Please fill all required fields before proceeding.'
+      );
+      return;
+    }
+    
     if (currentStep < 4) setCurrentStep(currentStep + 1);
     else {
-      // Handle Final Submit
-      navigate('/admin/buses');
+      const data = new FormData();
+      Object.keys(formData).forEach(key => {
+        const val = formData[key as keyof typeof formData];
+        if (key === 'busPhotos' && Array.isArray(val)) {
+          val.forEach((file: File) => data.append('busPhotos', file));
+        } else if (val instanceof File) {
+          data.append(key, val);
+        } else if (val instanceof FileList) {
+          Array.from(val).forEach((file: any) => data.append(key, file));
+        } else if (key === 'amenities') {
+          data.append(key, JSON.stringify(val));
+        } else if (val !== null && val !== undefined && val !== '') {
+          data.append(key, String(val));
+        }
+      });
+      const loadingToast = toast.loading(id ? 'Updating bus...' : 'Registering bus...');
+      try {
+        if (id) {
+          await updateBus(id, data);
+          toast.success('Bus updated successfully', { id: loadingToast });
+        } else {
+          const result = await registerBus(data);
+          const regNum = (result as any)?.bus?.registrationNumber || formData.registrationNumber;
+          toast.success(`Asset registered: ${regNum}`, { id: loadingToast });
+        }
+        clearDraft();
+        navigate('/admin/buses');
+      } catch (err: any) {
+        toast.error(err.message || 'Action failed', { id: loadingToast });
+      }
     }
   };
 
@@ -73,17 +353,20 @@ export default function AddBus() {
       <div className="bg-[#0ea5e9] px-6 py-8 w-full">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="text-white">
-            <p className="text-[12px] font-medium text-sky-100/80 mb-1 flex items-center gap-1.5">
-              Dashboard <ChevronRight className="w-3 h-3" /> 
-              Fleet Management <ChevronRight className="w-3 h-3" /> 
-              Add Bus
-            </p>
-            <h1 className="text-[28px] font-bold tracking-tight mb-1">
-              Add New Bus
+            <div className="flex items-center gap-3 mb-1">
+              <p className="text-[12px] font-medium text-sky-100/80 flex items-center gap-1.5">
+                Dashboard <ChevronRight className="w-3 h-3" /> 
+                Fleet Management <ChevronRight className="w-3 h-3" /> 
+                {id ? 'Edit Bus' : 'Add New Bus'}
+              </p>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 rounded-full border border-white/10">
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Draft Saved</span>
+              </div>
+            </div>
+            <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight leading-tight">
+              {id ? 'Update Asset Details' : 'Register New Fleet Asset'}
             </h1>
-            <p className="text-[14px] text-sky-50">
-              Register a new bus to your fleet
-            </p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -93,8 +376,12 @@ export default function AddBus() {
             >
               Cancel
             </button>
-            <button className="px-5 py-2.5 rounded-xl bg-white text-[#0ea5e9] font-bold text-[14px] hover:bg-sky-50 transition-colors shadow-sm">
-              Save & Continue
+            <button 
+              onClick={handleNext}
+              disabled={isLoading}
+              className="px-5 py-2.5 rounded-xl bg-white text-[#0ea5e9] font-bold text-[14px] hover:bg-sky-50 transition-colors shadow-sm disabled:opacity-50"
+            >
+              {isLoading ? 'Saving...' : (currentStep === 4 ? 'Submit Bus' : 'Save & Continue')}
             </button>
           </div>
         </div>
@@ -103,12 +390,9 @@ export default function AddBus() {
       {/* ── Main Content Container ── */}
       <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 -mt-6">
         
-        {/* Horizontal Wizard Stepper Box */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
           <div className="flex items-center justify-between w-full max-w-3xl mx-auto relative">
-            {/* Connecting Lines */}
             <div className="absolute top-6 left-[10%] right-[10%] h-0.5 bg-slate-100 -z-0"></div>
-            
             {STEPS.map((step) => {
               const isActive = step.id === currentStep;
               const isPast = step.id < currentStep;
@@ -124,247 +408,47 @@ export default function AddBus() {
                   <p className={clsx("text-[13px] font-bold mb-0.5 transition-colors text-center whitespace-nowrap", isActive ? "text-[#1e293b]" : "text-slate-500")}>
                     {step.title}
                   </p>
-                  <p className="text-[11px] font-medium text-slate-400 text-center">
-                    {step.description}
-                  </p>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Form Content Area */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
           
           {currentStep === 1 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="mb-8">
                 <h2 className="text-[18px] font-bold text-[#1e293b] mb-1">Basic Information</h2>
-                <p className="text-[13px] text-slate-500">Enter the basic details of your bus</p>
-              </div>
-
-              {/* Bus Identification */}
-              <div className="mb-10">
-                <h3 className="text-[15px] font-bold text-[#1e293b] mb-5 border-b border-slate-100 pb-2">Bus Identification</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Bus Registration Number <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Enter your vehicle registration number"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.registrationNumber}
-                      onChange={e => setFormData({...formData, registrationNumber: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Bus Name/Nickname <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Give your bus a memorable name"
-                      maxLength={50}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.nickname}
-                      onChange={e => setFormData({...formData, nickname: e.target.value})}
-                    />
-                    <div className="flex justify-between mt-1.5">
-                      <p className="text-[11px] text-slate-400">e.g., Express 1, Premium Coach</p>
-                      <p className="text-[11px] text-slate-400">{formData.nickname.length}/50</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Chassis Number <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Vehicle Identification Number (VIN)"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.chassisNumber}
-                      onChange={e => setFormData({...formData, chassisNumber: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Engine Number <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Engine identification number"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.engineNumber}
-                      onChange={e => setFormData({...formData, engineNumber: e.target.value})}
-                    />
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                  <FormInput label="Registration Number" placeholder="e.g. LAG-123-XY" field="registrationNumber" required />
+                  <FormInput label="Nickname" placeholder="e.g. Blue Thunder" field="nickname" />
+                  <FormInput label="Chassis Number" placeholder="Enter chassis ID" field="chassisNumber" required />
+                  <FormInput label="Engine Number" placeholder="Enter engine ID" field="engineNumber" required />
+                  <FormInput label="Owner Name" placeholder="Full name" field="ownerName" required />
+                  <FormInput label="Owner Phone" placeholder="080XXXXXXXX" field="ownerPhone" required />
+                  <FormInput label="Registration Date" type="date" field="registrationDate" required />
+                  <FormInput label="Insurance Provider" placeholder="e.g. AXA Mansard" field="insuranceProvider" required />
+                  <FormInput label="Insurance Expiry" type="date" field="insuranceExpiry" required />
+                  <FormInput label="Manufacturer" placeholder="e.g. Mercedes-Benz" field="manufacturer" required />
+                  <FormInput label="Model" placeholder="e.g. Marcopolo G7" field="model" required />
+                  <FormInput label="Year" placeholder="2023" type="number" field="year" required />
+                  <FormInput label="Color" placeholder="e.g. Royal Blue" field="color" required />
+                  <FormSelect label="Fuel Type" options={['Diesel', 'Petrol', 'CNG', 'Electric']} field="fuelType" required />
                 </div>
-              </div>
-
-              {/* Ownership & Registration */}
-              <div className="mb-10">
-                <h3 className="text-[15px] font-bold text-[#1e293b] mb-5 border-b border-slate-100 pb-2">Ownership & Registration</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Owner Name <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Name of the registered owner"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.ownerName}
-                      onChange={e => setFormData({...formData, ownerName: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Owner Phone Number <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="tel" 
-                      placeholder="Contact number for the owner"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.ownerPhone}
-                      onChange={e => setFormData({...formData, ownerPhone: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Registration Date <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="date" 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600"
-                      value={formData.registrationDate}
-                      onChange={e => setFormData({...formData, registrationDate: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Date of vehicle registration</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Insurance Provider <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600 appearance-none bg-white"
-                      value={formData.insuranceProvider}
-                      onChange={e => setFormData({...formData, insuranceProvider: e.target.value})}
-                    >
-                      <option value="" disabled>Select your insurance company</option>
-                      <option value="leadway">Leadway Assurance</option>
-                      <option value="axa">AXA Mansard</option>
-                      <option value="aiico">AIICO Insurance</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Insurance Expiry Date <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="date" 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600"
-                      value={formData.insuranceExpiry}
-                      onChange={e => setFormData({...formData, insuranceExpiry: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">When does your insurance expire?</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Vehicle Details */}
-              <div className="mb-2">
-                <h3 className="text-[15px] font-bold text-[#1e293b] mb-5 border-b border-slate-100 pb-2">Vehicle Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Manufacturer <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600 appearance-none bg-white"
-                      value={formData.manufacturer}
-                      onChange={e => setFormData({...formData, manufacturer: e.target.value})}
-                    >
-                      <option value="" disabled>Bus manufacturer</option>
-                      <option value="toyota">Toyota</option>
-                      <option value="mercedes">Mercedes-Benz</option>
-                      <option value="volvo">Volvo</option>
-                      <option value="scania">Scania</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Model <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Bus model name"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.model}
-                      onChange={e => setFormData({...formData, model: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Year of Manufacture <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600 appearance-none bg-white"
-                      value={formData.year}
-                      onChange={e => setFormData({...formData, year: e.target.value})}
-                    >
-                      <option value="" disabled>When was the bus manufactured?</option>
-                      {Array.from({length: 20}, (_, i) => new Date().getFullYear() - i).map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Color <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600 appearance-none bg-white"
-                      value={formData.color}
-                      onChange={e => setFormData({...formData, color: e.target.value})}
-                    >
-                      <option value="" disabled>Primary color of the bus</option>
-                      <option value="white">White</option>
-                      <option value="silver">Silver</option>
-                      <option value="blue">Blue</option>
-                      <option value="black">Black</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Fuel Type Radio Buttons */}
-                <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-3">
-                    Fuel Type <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-wrap gap-4">
-                    {['Diesel', 'Petrol', 'CNG', 'Hybrid'].map((type) => (
-                      <label key={type} className="flex items-center gap-2 cursor-pointer">
-                        <div className={clsx(
-                          "w-4 h-4 rounded-full border flex items-center justify-center transition-colors",
-                          formData.fuelType === type ? "border-[#0ea5e9]" : "border-slate-300"
-                        )}>
-                          {formData.fuelType === type && <div className="w-2 h-2 rounded-full bg-[#0ea5e9]" />}
-                        </div>
-                        <span className="text-[14px] text-slate-700 font-medium">{type}</span>
-                        <input 
-                          type="radio" 
-                          name="fuelType" 
-                          value={type} 
-                          className="hidden" 
-                          checked={formData.fuelType === type}
-                          onChange={(e) => setFormData({...formData, fuelType: e.target.value})}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-3">Type of fuel the bus uses</p>
+                
+                <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                  <button 
+                    onClick={() => {
+                      if (confirm('Are you sure you want to clear the entire form? All unsaved progress will be lost.')) {
+                        clearDraft();
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg text-[13px] font-semibold transition-colors"
+                  >
+                    <RefreshCcw className="w-4 h-4" />
+                    Clear Form Draft
+                  </button>
                 </div>
               </div>
             </div>
@@ -373,215 +457,93 @@ export default function AddBus() {
           {currentStep === 2 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="mb-8">
-                <h2 className="text-[18px] font-bold text-[#1e293b] mb-1">Bus Specifications</h2>
-                <p className="text-[13px] text-slate-500">Enter technical specifications of your bus</p>
+                <h2 className="text-[18px] font-bold text-[#1e293b] mb-1">Specifications</h2>
+                <p className="text-[13px] text-slate-500">Technical and capacity details</p>
               </div>
 
-              {/* Capacity & Dimensions */}
               <div className="mb-10">
                 <h3 className="text-[15px] font-bold text-[#1e293b] mb-5 border-b border-slate-100 pb-2">Capacity & Dimensions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Total Seating Capacity <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g., 50"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.totalCapacity}
-                      onChange={e => setFormData({...formData, totalCapacity: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Total number of seats</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Available Seats <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g., 48"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.availableSeats}
-                      onChange={e => setFormData({...formData, availableSeats: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Seats available for passengers</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Wheelchair Accessible Seats
-                    </label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g., 2"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.wheelchairSeats}
-                      onChange={e => setFormData({...formData, wheelchairSeats: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Number of wheelchair accessible seats</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Bus Length (meters)
-                    </label>
-                    <input 
-                      type="number" step="0.1"
-                      placeholder="e.g., 12.5"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.busLength}
-                      onChange={e => setFormData({...formData, busLength: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Length of the bus in meters</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Bus Width (meters)
-                    </label>
-                    <input 
-                      type="number" step="0.1"
-                      placeholder="e.g., 2.5"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.busWidth}
-                      onChange={e => setFormData({...formData, busWidth: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Width of the bus in meters</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Bus Height (meters)
-                    </label>
-                    <input 
-                      type="number" step="0.1"
-                      placeholder="e.g., 3.8"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.busHeight}
-                      onChange={e => setFormData({...formData, busHeight: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Height of the bus in meters</p>
-                  </div>
+                  <FormInput label="Total Capacity" placeholder="e.g. 50" type="number" field="totalCapacity" required />
+                  <FormInput label="Available Seats" placeholder="e.g. 50" type="number" field="availableSeats" required />
+                  <FormInput label="Wheelchair Seats" placeholder="e.g. 2" type="number" field="wheelchairSeats" />
+                  <FormInput label="Bus Length (m)" placeholder="e.g. 12.5" type="number" field="busLength" />
+                  <FormInput label="Bus Width (m)" placeholder="e.g. 2.5" type="number" field="busWidth" />
+                  <FormInput label="Bus Height (m)" placeholder="e.g. 3.8" type="number" field="busHeight" />
                 </div>
               </div>
 
-              {/* Performance & Maintenance */}
-              <div className="mb-2">
-                <h3 className="text-[15px] font-bold text-[#1e293b] mb-5 border-b border-slate-100 pb-2">Performance & Maintenance</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Current Mileage (km) <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g., 150000"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.currentMileage}
-                      onChange={e => setFormData({...formData, currentMileage: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Current odometer reading</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Last Service Date <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="date" 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600"
-                      value={formData.lastServiceDate}
-                      onChange={e => setFormData({...formData, lastServiceDate: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">When was the last maintenance?</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Next Service Due <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="date" 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all text-slate-600"
-                      value={formData.nextServiceDue}
-                      onChange={e => setFormData({...formData, nextServiceDue: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Scheduled maintenance date</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                      Engine Capacity (cc)
-                    </label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g., 5900"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:border-[#0ea5e9] transition-all"
-                      value={formData.engineCapacity}
-                      onChange={e => setFormData({...formData, engineCapacity: e.target.value})}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1.5">Engine displacement in cubic centimeters</p>
-                  </div>
+              <div className="mb-10">
+                <h3 className="text-[15px] font-bold text-[#1e293b] mb-5 border-b border-slate-100 pb-2">Technical Specs</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <FormInput label="Current Mileage (km)" placeholder="e.g. 45000" type="number" field="currentMileage" required />
+                  <FormInput label="Last Service Date" type="date" field="lastServiceDate" required subLabel="When was the last maintenance?" />
+                  <FormInput label="Next Service Due" type="date" field="nextServiceDue" required subLabel="Scheduled maintenance date" />
+                  <FormInput label="Engine Capacity (cc)" placeholder="e.g. 5900" type="number" field="engineCapacity" subLabel="Engine displacement in cubic centimeters" />
                 </div>
+              </div>
 
-                {/* Maintenance Status Radio Buttons */}
-                <div className="mb-6">
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-3">
-                    Maintenance Status <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-col gap-3">
-                    {[
-                      { value: 'Excellent', color: 'bg-emerald-500' },
-                      { value: 'Good', color: 'bg-green-500' },
-                      { value: 'Fair', color: 'bg-amber-500' },
-                      { value: 'Poor', color: 'bg-red-500' }
-                    ].map((status) => (
-                      <label key={status.value} className="flex items-center gap-3 cursor-pointer group">
-                        <div className={clsx(
-                          "w-4 h-4 rounded-full border flex items-center justify-center transition-colors shadow-sm",
-                          formData.maintenanceStatus === status.value ? "border-[#0ea5e9]" : "border-slate-300 group-hover:border-slate-400"
-                        )}>
-                          {formData.maintenanceStatus === status.value && <div className="w-2 h-2 rounded-full bg-[#0ea5e9]" />}
-                        </div>
-                        <span className={clsx("w-3 h-3 rounded-full", status.color)}></span>
-                        <span className="text-[14px] text-slate-700 font-medium">{status.value}</span>
-                        <input 
-                          type="radio" 
-                          name="maintenanceStatus" 
-                          value={status.value} 
-                          className="hidden" 
-                          checked={formData.maintenanceStatus === status.value}
-                          onChange={(e) => setFormData({...formData, maintenanceStatus: e.target.value})}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-3">Current condition of the bus</p>
+              {/* Maintenance Status Radio Buttons */}
+              <div className="mb-6">
+                <h3 className="text-[15px] font-bold text-[#1e293b] mb-5 border-b border-slate-100 pb-2">Operational Status</h3>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-3">
+                  Maintenance Status <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-col gap-3">
+                  {[
+                    { value: 'Excellent', color: 'bg-emerald-500' },
+                    { value: 'Good', color: 'bg-green-500' },
+                    { value: 'Fair', color: 'bg-amber-500' },
+                    { value: 'Poor', color: 'bg-red-500' }
+                  ].map((status) => (
+                    <label key={status.value} className="flex items-center gap-3 cursor-pointer group">
+                      <div className={clsx(
+                        "w-4 h-4 rounded-full border flex items-center justify-center transition-colors shadow-sm",
+                        formData.maintenanceStatus === status.value ? "border-[#0ea5e9]" : "border-slate-300 group-hover:border-slate-400"
+                      )}>
+                        {formData.maintenanceStatus === status.value && <div className="w-2 h-2 rounded-full bg-[#0ea5e9]" />}
+                      </div>
+                      <span className={clsx("w-3 h-3 rounded-full", status.color)}></span>
+                      <span className="text-[14px] text-slate-700 font-medium">{status.value}</span>
+                      <input 
+                        type="radio" 
+                        name="maintenanceStatus" 
+                        value={status.value} 
+                        className="hidden" 
+                        checked={formData.maintenanceStatus === status.value}
+                        onChange={(e) => setFormData({ maintenanceStatus: e.target.value })}
+                      />
+                    </label>
+                  ))}
                 </div>
+              </div>
 
-                {/* Transmission Type Text Radios */}
-                <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-3">
-                    Transmission Type <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-wrap gap-6">
-                    {['Manual', 'Automatic', 'Semi-Automatic'].map((type) => (
-                      <label key={type} className="flex items-center gap-2 cursor-pointer group">
-                        <div className={clsx(
-                          "w-4 h-4 rounded-full border flex items-center justify-center transition-colors shadow-sm",
-                          formData.transmissionType === type ? "border-[#0ea5e9]" : "border-slate-300 group-hover:border-slate-400"
-                        )}>
-                          {formData.transmissionType === type && <div className="w-2 h-2 rounded-full bg-[#0ea5e9]" />}
-                        </div>
-                        <span className="text-[14px] text-slate-700 font-medium">{type}</span>
-                        <input 
-                          type="radio" 
-                          name="transmissionType" 
-                          value={type} 
-                          className="hidden" 
-                          checked={formData.transmissionType === type}
-                          onChange={(e) => setFormData({...formData, transmissionType: e.target.value})}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-3">Type of transmission</p>
+              {/* Transmission Type Text Radios */}
+              <div className="mb-10">
+                <label className="block text-[13px] font-semibold text-slate-700 mb-3">
+                  Transmission Type <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-6">
+                  {['Manual', 'Automatic', 'Semi-Automatic'].map((type) => (
+                    <label key={type} className="flex items-center gap-2 cursor-pointer group">
+                      <div className={clsx(
+                        "w-4 h-4 rounded-full border flex items-center justify-center transition-colors shadow-sm",
+                        formData.transmissionType === type ? "border-[#0ea5e9]" : "border-slate-300 group-hover:border-slate-400"
+                      )}>
+                        {formData.transmissionType === type && <div className="w-2 h-2 rounded-full bg-[#0ea5e9]" />}
+                      </div>
+                      <span className="text-[14px] text-slate-700 font-medium">{type}</span>
+                      <input 
+                        type="radio" 
+                        name="transmissionType" 
+                        value={type} 
+                        className="hidden" 
+                        checked={formData.transmissionType === type}
+                        onChange={(e) => setFormData({ transmissionType: e.target.value })}
+                      />
+                    </label>
+                  ))}
                 </div>
-
               </div>
 
               {/* Amenities */}
@@ -589,7 +551,7 @@ export default function AddBus() {
                 <h3 className="text-[15px] font-bold text-[#1e293b] mb-5 border-b border-slate-100 pb-2">Amenities</h3>
                 <div className="flex flex-wrap gap-4">
                   {['Air Conditioning', 'WiFi', 'Charging Ports', 'Entertainment System', 'Fire Extinguisher', 'Luggage Compartment'].map((amenity) => {
-                    const isSelected = formData.amenities.includes(amenity);
+                    const isSelected = (formData.amenities || []).includes(amenity);
                     return (
                       <label 
                         key={amenity} 
@@ -610,10 +572,11 @@ export default function AddBus() {
                           className="hidden" 
                           checked={isSelected}
                           onChange={(e) => {
+                            const currentAmenities = formData.amenities || [];
                             if (e.target.checked) {
-                              setFormData({ ...formData, amenities: [...formData.amenities, amenity] });
+                              setFormData({ ...formData, amenities: [...currentAmenities, amenity] });
                             } else {
-                              setFormData({ ...formData, amenities: formData.amenities.filter(a => a !== amenity) });
+                              setFormData({ ...formData, amenities: (formData.amenities || []).filter(a => a !== amenity) });
                             }
                           }}
                         />
@@ -634,121 +597,69 @@ export default function AddBus() {
 
               <div className="flex flex-col gap-6">
                 
-                {/* File Upload Helper Component */}
-                {(() => {
-                  const FileUpload = ({ 
-                    label, 
-                    required, 
-                    subLabel, 
-                    field 
-                  }: { 
-                    label: string, 
-                    required?: boolean, 
-                    subLabel?: string,
-                    field: keyof typeof formData
-                  }) => {
-                    const file = formData[field] as File | null;
+                <div className="flex flex-col gap-6">
+                  <FileUpload label="Vehicle Registration Certificate" required field="vehicleRegistrationCert" />
+                  <FileUpload label="Insurance Certificate" required field="insuranceCert" />
+                  <FileUpload label="Roadworthiness Certificate" required field="roadworthinessCert" />
+                  <FileUpload label="Inspection Report" field="inspectionReport" />
+                  <FileUpload label="Emission Test Certificate" field="emissionTestCert" />
+                  <FileUpload 
+                    label="Bus Photos" 
+                    required 
+                    subLabel="Upload up to 10 photos (front, side, interior)" 
+                    field="busPhotos" 
+                  />
+                </div>
 
-                    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setFormData({ ...formData, [field]: e.target.files[0] });
-                      }
-                    };
-
-                    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-                      e.preventDefault();
-                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                        setFormData({ ...formData, [field]: e.dataTransfer.files[0] });
-                      }
-                    };
-
-                    const removeFile = (e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      setFormData({ ...formData, [field]: null });
-                    };
-
-                    return (
-                      <div>
-                        <div className="flex items-center gap-1 mb-2">
-                          <label className="text-[13px] font-semibold text-slate-700">{label}</label>
-                          {required && <span className="text-red-500 text-[13px]">*</span>}
-                        </div>
-                        {subLabel && <p className="text-[11px] text-slate-500 mb-2">{subLabel}</p>}
-                        
+                {/* --- PHOTO GALLERY PREVIEW SECTION --- */}
+                {formData.busPhotos.length > 0 && (
+                  <div className="mt-4 p-5 bg-white border border-slate-100 rounded-2xl shadow-sm animate-in zoom-in-95 duration-300 min-h-[220px]">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[14px] font-bold text-[#1e293b]">Image Gallery ({formData.busPhotos.length}/10)</h3>
+                      <button 
+                        onClick={() => {
+                          setFormData({ busPhotos: [], previews: [] });
+                        }}
+                        className="text-[11px] font-bold text-red-500 uppercase tracking-wider hover:text-red-600 transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                      {previews.map((url, index) => (
                         <div 
-                          className={clsx(
-                            "w-full border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer group transition-colors relative",
-                            file 
-                              ? "border-[#22c55e]/50 bg-[#f0fdf4]/50" 
-                              : "border-[#0ea5e9]/30 bg-[#f0f9ff]/50 hover:bg-[#f0f9ff]"
-                          )}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={handleDrop}
-                          onClick={() => document.getElementById(`file-upload-${field}`)?.click()}
+                          key={url} 
+                          className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group bg-slate-50"
                         >
-                          <input 
-                            type="file" 
-                            id={`file-upload-${field}`}
-                            className="hidden" 
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={handleFileChange}
+                          <img 
+                            src={url} 
+                            alt={`Preview ${index + 1}`} 
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" 
                           />
-
-                          {file ? (
-                            <div className="flex flex-col items-center text-center">
-                              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm text-[#22c55e]">
-                                <CheckCircle className="w-5 h-5" />
-                              </div>
-                              <p className="text-[13px] font-bold text-slate-700 mb-1 truncate max-w-[250px]">
-                                {file.name}
-                              </p>
-                              <p className="text-[11px] text-slate-500 mb-3">
-                                {(file.size / (1024 * 1024)).toFixed(2)} MB
-                              </p>
-                              <button 
-                                onClick={removeFile}
-                                className="text-[12px] font-semibold text-red-500 hover:text-red-600 transition-colors"
-                              >
-                                Remove File
-                              </button>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm group-hover:scale-105 transition-transform text-[#0ea5e9]">
-                                <UploadCloud className="w-5 h-5" />
-                              </div>
-                              <p className="text-[13px] font-medium text-slate-700 mb-1">
-                                Drag and drop your file here
-                              </p>
-                              <p className="text-[12px] text-slate-500 mb-3">
-                                or click to browse
-                              </p>
-                              <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
-                                PDF, JPG, PNG (Max 5MB)
-                              </p>
-                            </>
-                          )}
+                          <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <button
+                            onClick={() => {
+                              const newPhotos = [...formData.busPhotos];
+                              const newPreviews = [...previews];
+                              
+                              // Revoke the URL to clean up memory
+                              URL.revokeObjectURL(newPreviews[index]);
+                              
+                              newPhotos.splice(index, 1);
+                              newPreviews.splice(index, 1);
+                              
+                              setFormData({ busPhotos: newPhotos, previews: newPreviews });
+                            }}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all scale-90 hover:scale-100 opacity-0 group-hover:opacity-100"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                      </div>
-                    );
-                  };
-                  
-                  return (
-                    <>
-                      <FileUpload label="Vehicle Registration Certificate" required field="vehicleRegistrationCert" />
-                      <FileUpload label="Insurance Certificate" required field="insuranceCert" />
-                      <FileUpload label="Roadworthiness Certificate" required field="roadworthinessCert" />
-                      <FileUpload label="Inspection Report" field="inspectionReport" />
-                      <FileUpload label="Emission Test Certificate" field="emissionTestCert" />
-                      <FileUpload 
-                        label="Bus Photos" 
-                        required 
-                        subLabel="Upload at least 3 photos (front, side, interior)" 
-                        field="busPhotos"
-                      />
-                    </>
-                  );
-                })()}
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               </div>
             </div>
@@ -815,7 +726,7 @@ export default function AddBus() {
 
                     <SummarySection title="Amenities" stepIndex={2}>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
-                        {formData.amenities.length > 0 ? formData.amenities.map((amenity, idx) => (
+                        {(formData.amenities || []).length > 0 ? (formData.amenities || []).map((amenity, idx) => (
                           <div key={idx} className="flex items-center gap-2">
                             <span className="w-5 h-5 rounded-full border border-green-500/30 flex items-center justify-center text-green-500 bg-green-50">
                               <CheckCircle className="w-3 h-3" />
@@ -883,9 +794,19 @@ export default function AddBus() {
             </button>
             <button 
               onClick={handleNext}
-              className="px-8 py-2.5 rounded-xl bg-[#0ea5e9] text-white font-bold text-[14px] hover:bg-[#0284c7] transition-colors shadow-sm flex items-center gap-2"
+              disabled={isLoading}
+              className="px-8 py-2.5 rounded-xl bg-[#0ea5e9] text-white font-bold text-[14px] hover:bg-[#0284c7] transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
             >
-              {currentStep === 4 ? 'Submit Bus' : 'Next'} <ChevronRight className="w-4 h-4" />
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {currentStep === 4 ? 'Submitting...' : 'Processing...'}
+                </>
+              ) : (
+                <>
+                  {currentStep === 4 ? 'Submit Bus' : 'Next'} <ChevronRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
 

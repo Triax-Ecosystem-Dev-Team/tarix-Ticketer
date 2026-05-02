@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Bus,
   CheckCircle,
@@ -16,31 +16,12 @@ import QuickActions from '../components/QuickActions';
 import ActiveTrips from '../components/ActiveTrips';
 import SalesOverviewChart from '../components/SalesOverviewChart';
 
-// ── 🔌 MOCK API — swap fetchDashboardStats() body when backend is ready ──────
-// Replace with: return fetch("/api/dashboard/stats").then(r => r.json())
-async function fetchDashboardStats() {
-  await new Promise(r => setTimeout(r, 1200));
-  return {
-    totalBuses:      45,
-    inactiveBuses:   5,
-    availableBuses:  32,
-    utilization:     71,
-    activeTrips:     13,
-    completedToday:  28,
-    completedChange: 12,
-    revenueToday:    '₦2,450,000',
-    revenueChange:   8,
-    ticketsSold:     1245,
-    driversActive:   38,
-    driversTotal:    45,
-  };
-}
+import { useAdminStore, type DashboardStats } from '../store/useAdminStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type DashboardData = Awaited<ReturnType<typeof fetchDashboardStats>>;
-
 type CardConfig = Omit<StatCardProps, 'visible'> & { id: number };
+
 
 interface Cards {
   top:    CardConfig[];
@@ -49,7 +30,7 @@ interface Cards {
 
 // ── Builds card configs from raw API data ────────────────────────────────────
 
-function buildCards(d: DashboardData): Cards {
+function buildCards(d: DashboardStats): Cards {
   return {
     top: [
       {
@@ -147,27 +128,22 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
 // ── AdminDashboard ────────────────────────────────────────────────────────────
 
 const AdminDashboard = () => {
-  const [cards,   setCards]   = useState<Cards | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const { dashboardStats, isLoading: loading, error, fetchAdminDashboard } = useAdminStore();
   const [visible, setVisible] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setVisible(false);
-    try {
-      const data = await fetchDashboardStats();
-      setCards(buildCards(data));
-      setTimeout(() => setVisible(true), 60);
-    } catch (e) {
-      setError((e as Error).message || 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    fetchAdminDashboard();
+  }, [fetchAdminDashboard]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    if (!loading && dashboardStats) {
+      setTimeout(() => setVisible(true), 60);
+    } else {
+      setVisible(false);
+    }
+  }, [loading, dashboardStats]);
+
+  const cards = dashboardStats ? buildCards(dashboardStats) : null;
 
   return (
     <div className="space-y-8">
@@ -176,7 +152,7 @@ const AdminDashboard = () => {
       <div className="flex items-center justify-between">
         <p className="text-xl font-semibold text-gray-800 tracking-tight">Overview</p>
         <button
-          onClick={loadData}
+          onClick={fetchAdminDashboard}
           disabled={loading}
           className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50
                      text-gray-500 hover:text-gray-800 text-xs font-medium px-3.5 py-2 rounded-lg
@@ -188,7 +164,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* ── Error ── */}
-      {error && <ErrorBanner message={error} onRetry={loadData} />}
+      {error && <ErrorBanner message={error} onRetry={fetchAdminDashboard} />}
 
       {/* ── Stats ── */}
       {loading ? (

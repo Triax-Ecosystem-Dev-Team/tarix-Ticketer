@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, User, Settings, HelpCircle, LogOut } from 'lucide-react';
@@ -37,14 +38,14 @@ const UserNav = () => {
 
   const dropdownItems = user.role === 'Admin' 
     ? [
-        { name: 'Profile', path: '/admin/profile', icon: User },
-        { name: 'Settings', path: '/admin/settings', icon: Settings },
-        { name: 'Help', path: '/admin/help', icon: HelpCircle }
+        { name: 'Profile', path: '/admin/account/profile', icon: User },
+        { name: 'Settings', path: '/admin/account/settings', icon: Settings },
+        { name: 'Help', path: '/admin/account/help', icon: HelpCircle }
       ]
     : [
-        { name: 'Profile', path: '/profile', icon: User },
-        { name: 'Settings', path: '/settings', icon: Settings },
-        { name: 'Help', path: '/help', icon: HelpCircle }
+        { name: 'Profile', path: '/account/profile', icon: User },
+        { name: 'Settings', path: '/account/settings', icon: Settings },
+        { name: 'Help', path: '/account/help', icon: HelpCircle }
       ];
 
   return (
@@ -54,8 +55,12 @@ const UserNav = () => {
         className="flex items-center gap-2 pl-2 cursor-pointer focus:outline-none group"
       >
         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary-blue flex items-center
-                        justify-center text-white font-bold text-xs sm:text-sm shadow-sm group-hover:bg-[#0086E6] transition-colors">
-          {getInitials(user.name)}
+                        justify-center text-white font-bold text-xs sm:text-sm shadow-sm group-hover:bg-[#0086E6] transition-colors overflow-hidden">
+          {user.avatar ? (
+            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+          ) : (
+            getInitials(user.name)
+          )}
         </div>
         {/* Name — hidden on mobile, shown sm+ */}
         <div className="hidden sm:flex items-center gap-1.5">

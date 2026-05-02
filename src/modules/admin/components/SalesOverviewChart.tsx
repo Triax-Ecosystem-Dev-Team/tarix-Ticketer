@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+// import removed
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -6,28 +6,9 @@ import {
 import { TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 
-// ── 🔌 MOCK API — swap with fetch("/api/revenue/trend") when ready ────────────
-async function fetchRevenueTrend() {
-  await new Promise(r => setTimeout(r, 900));
-  return {
-    days: [
-      { day: 'Mon', value: 1800000 },
-      { day: 'Tue', value: 2100000 },
-      { day: 'Wed', value: 1950000 },
-      { day: 'Thu', value: 2450000 },
-      { day: 'Fri', value: 2750000 },
-      { day: 'Sat', value: 2800000 },
-      { day: 'Sun', value: 2350000 },
-    ],
-    totalRevenue:  15750000,
-    totalChange:   12,
-    averageDaily:  2250000,
-    averageChange: 5,
-  };
-}
+import { useAdminStore, type RevenueTrend } from '../store/useAdminStore';
 
-type TrendData = Awaited<ReturnType<typeof fetchRevenueTrend>>;
-type DayPoint  = TrendData['days'][number];
+type DayPoint  = RevenueTrend['days'][number];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -130,18 +111,7 @@ function StatBlock({ label, value, sub, subColor = 'text-green-500', large = fal
 // ── SalesOverviewChart (Revenue Trend) ───────────────────────────────────────
 
 const SalesOverviewChart = () => {
-  const [data,    setData]    = useState<TrendData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { setData(await fetchRevenueTrend()); }
-    catch (e) { setError((e as Error).message || 'Failed to load'); }
-    finally   { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+  const { revenueTrend: data, isLoading: loading, error, fetchAdminDashboard: load } = useAdminStore();
 
   const stats = data ? deriveStats(data.days) : null;
 
@@ -167,7 +137,7 @@ const SalesOverviewChart = () => {
 
         {/* Chart area */}
         <div className="mt-4 flex-1 min-h-[300px]">
-          {loading ? (
+          {loading || !data ? (
             <ChartSkeleton />
           ) : error ? (
             <div className="flex items-center gap-3 text-red-500 text-sm mt-6">
@@ -220,7 +190,7 @@ const SalesOverviewChart = () => {
       <div className="border-t sm:border-t-0 sm:border-l border-gray-100
                       p-5 sm:p-6 grid grid-cols-2 sm:grid-cols-1 gap-x-6
                       sm:flex sm:flex-col sm:justify-center">
-        {loading ? (
+        {loading || !data ? (
           <StatsSkeleton />
         ) : error ? null : (
           <>
