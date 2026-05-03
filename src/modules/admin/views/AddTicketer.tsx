@@ -1,32 +1,66 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Ticket, Camera, Upload, 
-  Mail, Phone, CreditCard, MapPin, 
-  Calendar, UserPlus 
+  Mail, Phone, MapPin, CreditCard,
+  Calendar, UserPlus, Briefcase, Loader2
 } from 'lucide-react';
+import { useTeamStore } from '../store/useTeamStore';
+import toast from 'react-hot-toast';
 
 export default function AddTicketer() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    idNumber: '',
-    homeAddress: '',
-    station: '',
-    workShift: '',
-    employmentDate: '',
-    monthlySalary: '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-  });
-  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const { 
+    ticketerForm, 
+    updateTicketerForm, 
+    registerMember, 
+    updateMember,
+    fetchMemberById,
+    resetForms,
+    isLoading 
+  } = useTeamStore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const isEdit = !!id;
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Fetch member if in edit mode
+  useEffect(() => {
+    if (isEdit && id) {
+      fetchMemberById('Ticketer', id).catch(() => {
+        toast.error("Failed to load ticketer details");
+        navigate('/admin/team');
+      });
+    }
+    return () => resetForms();
+  }, [isEdit, id]);
+
+  // Cleanup profile photo preview URL to prevent memory leaks
+  useEffect(() => {
+    if (profilePhoto) {
+      const url = URL.createObjectURL(profilePhoto);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [profilePhoto]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate submission
-    navigate('/admin/team');
+    try {
+      if (isEdit && id) {
+        await updateMember('Ticketer', id, { profilePhoto: profilePhoto || undefined });
+        toast.success("Ticketer updated successfully");
+      } else {
+        await registerMember('Ticketer', { profilePhoto: profilePhoto || undefined });
+        toast.success("Ticketer registered successfully");
+      }
+      navigate('/admin/team');
+    } catch (err: any) {
+      toast.error(err.message || `Failed to ${isEdit ? 'update' : 'register'} ticketer`);
+    }
   };
 
   return (
@@ -45,9 +79,9 @@ export default function AddTicketer() {
           <div className="w-14 h-14 rounded-full bg-[#E0F2FE] flex items-center justify-center shadow-sm">
             <Ticket className="w-7 h-7 text-[#0EA5E9]" />
           </div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-[#1E293B]">Add New Ticketer</h1>
+          <h1 className="text-[28px] font-semibold tracking-tight text-[#1E293B]">{isEdit ? 'Edit Ticketer Profile' : 'Add New Ticketer'}</h1>
         </div>
-        <p className="text-[#64748B] mb-8 text-[15px]">Fill in the details to register a new ticketing agent</p>
+        <p className="text-[#64748B] mb-8 text-[15px]">{isEdit ? `Modifying details for ${ticketerForm.fullName}` : 'Fill in the details to register a new ticketing agent'}</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Profile Photo Section */}
@@ -55,8 +89,8 @@ export default function AddTicketer() {
             <h2 className="text-[17px] font-medium text-[#1E293B] mb-6">Profile Photo</h2>
             <div className="flex items-center gap-8">
               <div className="w-28 h-28 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50 relative overflow-hidden group">
-                {profilePhoto ? (
-                  <img src={URL.createObjectURL(profilePhoto)} alt="Profile Preview" className="w-full h-full object-cover" />
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Profile Preview" className="w-full h-full object-cover" />
                 ) : (
                   <Camera className="w-8 h-8 text-slate-400" />
                 )}
@@ -97,111 +131,87 @@ export default function AddTicketer() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Full Name *
-                </label>
+                <label className="block text-[14px] text-slate-700 mb-2">Full Name *</label>
                 <input 
-                  type="text" 
-                  placeholder="Enter full name"
-                  required
+                  type="text" required placeholder="Enter full name"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 placeholder:text-slate-400"
-                  value={formData.fullName}
-                  onChange={e => setFormData({...formData, fullName: e.target.value})}
+                  value={ticketerForm.fullName}
+                  onChange={e => updateTicketerForm({ fullName: e.target.value })}
                 />
               </div>
               
               <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Email Address *
-                </label>
+                <label className="block text-[14px] text-slate-700 mb-2">Email Address *</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-slate-400" />
                   </div>
                   <input 
-                    type="email" 
-                    placeholder="ticketer@tarix.com"
-                    required
+                    type="email" required placeholder="ticketer@tarix.com"
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})}
+                    value={ticketerForm.email}
+                    onChange={e => updateTicketerForm({ email: e.target.value })}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Phone Number *
-                </label>
+                <label className="block text-[14px] text-slate-700 mb-2">Phone Number *</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Phone className="h-5 w-5 text-slate-400" />
                   </div>
                   <input 
-                    type="tel" 
-                    placeholder="+234 800 000 0000"
-                    required
+                    type="tel" required placeholder="+234 800 000 0000"
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    value={ticketerForm.phone}
+                    onChange={e => updateTicketerForm({ phone: e.target.value })}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  ID Number *
-                </label>
+                <label className="block text-[14px] text-slate-700 mb-2">ID Number *</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <CreditCard className="h-5 w-5 text-slate-400" />
                   </div>
                   <input 
-                    type="text" 
-                    placeholder="TKT-00000"
-                    required
+                    type="text" required placeholder="TKT-00000"
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.idNumber}
-                    onChange={e => setFormData({...formData, idNumber: e.target.value})}
+                    value={ticketerForm.idNumber}
+                    onChange={e => updateTicketerForm({ idNumber: e.target.value })}
                   />
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-[14px] text-slate-700 mb-2">
-                Home Address *
-              </label>
+              <label className="block text-[14px] text-slate-700 mb-2">Home Address *</label>
               <div className="relative">
                 <div className="absolute top-3.5 left-0 pl-4 pointer-events-none">
                   <MapPin className="h-5 w-5 text-slate-400" />
                 </div>
                 <textarea 
-                  placeholder="Enter full address"
-                  required
-                  rows={3}
+                  required rows={3} placeholder="Enter full address"
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 placeholder:text-slate-400 resize-y"
-                  value={formData.homeAddress}
-                  onChange={e => setFormData({...formData, homeAddress: e.target.value})}
+                  value={ticketerForm.homeAddress}
+                  onChange={e => updateTicketerForm({ homeAddress: e.target.value })}
                 ></textarea>
               </div>
             </div>
           </div>
 
-          {/* Employment Details Section */}
+          {/* Job Details Section */}
           <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
             <h2 className="text-[17px] font-medium text-[#1E293B] mb-6">Employment Details</h2>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Assigned Station *
-                </label>
+                <label className="block text-[14px] text-slate-700 mb-2">Assigned Station *</label>
                 <select 
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 bg-white"
-                  value={formData.station}
-                  onChange={e => setFormData({...formData, station: e.target.value})}
+                  required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 bg-white"
+                  value={ticketerForm.station}
+                  onChange={e => updateTicketerForm({ station: e.target.value })}
                 >
                   <option value="" disabled>Select station</option>
                   <option value="lagos">Lagos Terminal</option>
@@ -211,14 +221,11 @@ export default function AddTicketer() {
               </div>
 
               <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Work Shift *
-                </label>
+                <label className="block text-[14px] text-slate-700 mb-2">Work Shift *</label>
                 <select 
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 bg-white"
-                  value={formData.workShift}
-                  onChange={e => setFormData({...formData, workShift: e.target.value})}
+                  required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 bg-white"
+                  value={ticketerForm.workShift}
+                  onChange={e => updateTicketerForm({ workShift: e.target.value })}
                 >
                   <option value="" disabled>Select shift</option>
                   <option value="morning">Morning (6 AM - 2 PM)</option>
@@ -228,75 +235,28 @@ export default function AddTicketer() {
               </div>
 
               <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Employment Date *
-                </label>
+                <label className="block text-[14px] text-slate-700 mb-2">Employment Date *</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Calendar className="h-5 w-5 text-slate-400" />
                   </div>
                   <input 
-                    type="date" 
-                    required
+                    type="date" required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 text-slate-500"
-                    value={formData.employmentDate}
-                    onChange={e => setFormData({...formData, employmentDate: e.target.value})}
+                    value={ticketerForm.employmentDate}
+                    onChange={e => updateTicketerForm({ employmentDate: e.target.value })}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Monthly Salary (₦) *
-                </label>
+                <label className="block text-[14px] text-slate-700 mb-2">Monthly Salary (₦) *</label>
                 <input 
-                  type="number" 
-                  placeholder="50000"
-                  required
+                  type="number" required placeholder="50000"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 placeholder:text-slate-400"
-                  value={formData.monthlySalary}
-                  onChange={e => setFormData({...formData, monthlySalary: e.target.value})}
+                  value={ticketerForm.monthlySalary}
+                  onChange={e => updateTicketerForm({ monthlySalary: e.target.value })}
                 />
-              </div>
-            </div>
-          </div>
-
-          {/* Emergency Contact Section */}
-          <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
-            <h2 className="text-[17px] font-medium text-[#1E293B] mb-6">Emergency Contact</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Contact Name *
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="Enter emergency contact name"
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 placeholder:text-slate-400"
-                  value={formData.emergencyContactName}
-                  onChange={e => setFormData({...formData, emergencyContactName: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[14px] text-slate-700 mb-2">
-                  Contact Phone *
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <input 
-                    type="tel" 
-                    placeholder="+234 800 000 0000"
-                    required
-                    className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.emergencyContactPhone}
-                    onChange={e => setFormData({...formData, emergencyContactPhone: e.target.value})}
-                  />
-                </div>
               </div>
             </div>
           </div>
@@ -304,14 +264,14 @@ export default function AddTicketer() {
           {/* Form Actions */}
           <div className="flex justify-start gap-4 mt-8">
             <button 
-              type="submit"
-              className="px-6 py-3 rounded-xl bg-[#0EA5E9] text-white font-medium text-[14px] hover:bg-[#0284c7] transition-colors shadow-sm flex items-center gap-2"
+              type="submit" disabled={isLoading}
+              className="px-6 py-3 rounded-xl bg-[#0EA5E9] text-white font-medium text-[14px] hover:bg-[#0284c7] transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
             >
-              <UserPlus className="w-5 h-5" />
-              Add Ticketer
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+              {isLoading ? (isEdit ? "Saving..." : "Registering...") : (isEdit ? "Update Profile" : "Add Ticketer")}
             </button>
             <Link 
-              to="/admin/team/add"
+              to="/admin/team"
               className="px-8 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium text-[14px] hover:bg-slate-50 transition-colors"
             >
               Cancel

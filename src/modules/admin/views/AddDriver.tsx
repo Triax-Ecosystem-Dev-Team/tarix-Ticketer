@@ -1,35 +1,86 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, User, Camera, Upload, 
   Mail, Phone, CreditCard, MapPin, 
-  Calendar, UserPlus, Briefcase, Shield
+  Calendar, UserPlus, Briefcase, Shield, FileText, Loader2,
+  CheckCircle2
 } from 'lucide-react';
+import { useTeamStore } from '../store/useTeamStore';
+import toast from 'react-hot-toast';
+import clsx from 'clsx';
 
 export default function AddDriver() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    bloodGroup: '',
-    homeAddress: '',
-    licenseNumber: '',
-    yearsOfExperience: '',
-    licenseIssueDate: '',
-    licenseExpiryDate: '',
-    assignedBus: '',
-    employmentDate: '',
-    monthlySalary: '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-  });
-  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const { 
+    driverForm, 
+    updateDriverForm, 
+    registerMember, 
+    updateMember,
+    fetchMemberById,
+    resetForms,
+    isLoading 
+  } = useTeamStore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const isEdit = !!id;
+  
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [ninFile, setNinFile] = useState<File | null>(null);
+  
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Fetch member if in edit mode
+  useEffect(() => {
+    if (isEdit && id) {
+      fetchMemberById('Driver', id).catch(() => {
+        toast.error("Failed to load driver details");
+        navigate('/admin/team');
+      });
+    }
+    return () => resetForms();
+  }, [isEdit, id]);
+
+  // Cleanup profile photo preview URL to prevent memory leaks
+  useEffect(() => {
+    if (profilePhoto) {
+      const url = URL.createObjectURL(profilePhoto);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [profilePhoto]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate submission
-    navigate('/admin/team');
+    
+    // Frontend Validation
+    if (new Date(driverForm.licenseExpiryDate) <= new Date()) {
+      toast.error("License expiry date must be in the future");
+      return;
+    }
+
+    try {
+      const files = { 
+        profilePhoto: profilePhoto || undefined, 
+        licenseFile: licenseFile || undefined, 
+        ninFile: ninFile || undefined 
+      };
+
+      if (isEdit && id) {
+        await updateMember('Driver', id, files);
+        toast.success("Driver updated successfully");
+      } else {
+        await registerMember('Driver', files);
+        toast.success("Driver registered successfully");
+      }
+      
+      navigate('/admin/team');
+    } catch (err: any) {
+      toast.error(err.message || `Failed to ${isEdit ? 'update' : 'register'} driver`);
+    }
   };
 
   return (
@@ -48,9 +99,9 @@ export default function AddDriver() {
           <div className="w-14 h-14 rounded-full bg-[#fce7f3] flex items-center justify-center shadow-sm">
             <User className="w-7 h-7 text-[#EC4899]" />
           </div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-[#1E293B]">Add New Driver</h1>
+          <h1 className="text-[28px] font-semibold tracking-tight text-[#1E293B]">{isEdit ? 'Edit Driver Profile' : 'Add New Driver'}</h1>
         </div>
-        <p className="text-[#64748B] mb-8 text-[15px]">Fill in the details to register a new driver</p>
+        <p className="text-[#64748B] mb-8 text-[15px]">{isEdit ? `Modifying details for ${driverForm.fullName}` : 'Fill in the details to register a new driver'}</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Profile Photo Section */}
@@ -58,8 +109,8 @@ export default function AddDriver() {
             <h2 className="text-[17px] font-medium text-[#1E293B] mb-6">Profile Photo</h2>
             <div className="flex items-center gap-8">
               <div className="w-28 h-28 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50 relative overflow-hidden group">
-                {profilePhoto ? (
-                  <img src={URL.createObjectURL(profilePhoto)} alt="Profile Preview" className="w-full h-full object-cover" />
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Profile Preview" className="w-full h-full object-cover" />
                 ) : (
                   <Camera className="w-8 h-8 text-slate-400" />
                 )}
@@ -108,8 +159,8 @@ export default function AddDriver() {
                   placeholder="Enter full name"
                   required
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400"
-                  value={formData.fullName}
-                  onChange={e => setFormData({...formData, fullName: e.target.value})}
+                  value={driverForm.fullName}
+                  onChange={e => updateDriverForm({ fullName: e.target.value })}
                 />
               </div>
               
@@ -126,8 +177,8 @@ export default function AddDriver() {
                     placeholder="driver@tarix.com"
                     required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})}
+                    value={driverForm.email}
+                    onChange={e => updateDriverForm({ email: e.target.value })}
                   />
                 </div>
               </div>
@@ -145,8 +196,8 @@ export default function AddDriver() {
                     placeholder="+234 800 000 0000"
                     required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    value={driverForm.phone}
+                    onChange={e => updateDriverForm({ phone: e.target.value })}
                   />
                 </div>
               </div>
@@ -157,8 +208,8 @@ export default function AddDriver() {
                 </label>
                 <select 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 bg-white"
-                  value={formData.bloodGroup}
-                  onChange={e => setFormData({...formData, bloodGroup: e.target.value})}
+                  value={driverForm.bloodGroup}
+                  onChange={e => updateDriverForm({ bloodGroup: e.target.value })}
                 >
                   <option value="" disabled>Select blood group</option>
                   <option value="A+">A+</option>
@@ -186,8 +237,8 @@ export default function AddDriver() {
                   required
                   rows={3}
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400 resize-y"
-                  value={formData.homeAddress}
-                  onChange={e => setFormData({...formData, homeAddress: e.target.value})}
+                  value={driverForm.homeAddress}
+                  onChange={e => updateDriverForm({ homeAddress: e.target.value })}
                 ></textarea>
               </div>
             </div>
@@ -214,8 +265,8 @@ export default function AddDriver() {
                     placeholder="DL-000000000"
                     required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.licenseNumber}
-                    onChange={e => setFormData({...formData, licenseNumber: e.target.value})}
+                    value={driverForm.licenseNumber}
+                    onChange={e => updateDriverForm({ licenseNumber: e.target.value })}
                   />
                 </div>
               </div>
@@ -233,8 +284,8 @@ export default function AddDriver() {
                     placeholder="5"
                     required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.yearsOfExperience}
-                    onChange={e => setFormData({...formData, yearsOfExperience: e.target.value})}
+                    value={driverForm.yearsOfExperience}
+                    onChange={e => updateDriverForm({ yearsOfExperience: e.target.value })}
                   />
                 </div>
               </div>
@@ -251,8 +302,8 @@ export default function AddDriver() {
                     type="date" 
                     required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 text-slate-500"
-                    value={formData.licenseIssueDate}
-                    onChange={e => setFormData({...formData, licenseIssueDate: e.target.value})}
+                    value={driverForm.licenseIssueDate}
+                    onChange={e => updateDriverForm({ licenseIssueDate: e.target.value })}
                   />
                 </div>
               </div>
@@ -269,8 +320,63 @@ export default function AddDriver() {
                     type="date" 
                     required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 text-slate-500"
-                    value={formData.licenseExpiryDate}
-                    onChange={e => setFormData({...formData, licenseExpiryDate: e.target.value})}
+                    value={driverForm.licenseExpiryDate}
+                    onChange={e => updateDriverForm({ licenseExpiryDate: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Document Uploads */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label className="block text-[14px] text-slate-700 mb-2">
+                  License PDF *
+                </label>
+                <div className="flex items-center gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => document.getElementById('license-upload')?.click()}
+                    className={clsx(
+                      "flex-1 px-4 py-3 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all",
+                      licenseFile ? "border-[#22c55e] bg-green-50 text-[#22c55e]" : "border-slate-200 bg-slate-50 text-slate-400 hover:border-[#EC4899] hover:text-[#EC4899]"
+                    )}
+                  >
+                    {licenseFile ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                    <span className="text-[13.5px] font-medium">{licenseFile ? licenseFile.name : "Upload License PDF"}</span>
+                  </button>
+                  <input 
+                    type="file" 
+                    id="license-upload" 
+                    className="hidden" 
+                    accept="application/pdf"
+                    onChange={(e) => e.target.files && setLicenseFile(e.target.files[0])}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[14px] text-slate-700 mb-2">
+                  NIN Document PDF *
+                </label>
+                <div className="flex items-center gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => document.getElementById('nin-upload')?.click()}
+                    className={clsx(
+                      "flex-1 px-4 py-3 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all",
+                      ninFile ? "border-[#22c55e] bg-green-50 text-[#22c55e]" : "border-slate-200 bg-slate-50 text-slate-400 hover:border-[#EC4899] hover:text-[#EC4899]"
+                    )}
+                  >
+                    {ninFile ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                    <span className="text-[13.5px] font-medium">{ninFile ? ninFile.name : "Upload NIN PDF"}</span>
+                  </button>
+                  <input 
+                    type="file" 
+                    id="nin-upload" 
+                    className="hidden" 
+                    accept="application/pdf"
+                    onChange={(e) => e.target.files && setNinFile(e.target.files[0])}
                   />
                 </div>
               </div>
@@ -288,8 +394,8 @@ export default function AddDriver() {
                 </label>
                 <select 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 bg-white"
-                  value={formData.assignedBus}
-                  onChange={e => setFormData({...formData, assignedBus: e.target.value})}
+                  value={driverForm.assignedBusId}
+                  onChange={e => updateDriverForm({ assignedBusId: e.target.value })}
                 >
                   <option value="" disabled>Select bus (optional)</option>
                   <option value="bus-1">Toyota Coaster - ABC-123</option>
@@ -309,8 +415,8 @@ export default function AddDriver() {
                     type="date" 
                     required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 text-slate-500"
-                    value={formData.employmentDate}
-                    onChange={e => setFormData({...formData, employmentDate: e.target.value})}
+                    value={driverForm.employmentDate}
+                    onChange={e => updateDriverForm({ employmentDate: e.target.value })}
                   />
                 </div>
               </div>
@@ -325,8 +431,8 @@ export default function AddDriver() {
                 placeholder="100000"
                 required
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400"
-                value={formData.monthlySalary}
-                onChange={e => setFormData({...formData, monthlySalary: e.target.value})}
+                value={driverForm.monthlySalary}
+                onChange={e => updateDriverForm({ monthlySalary: e.target.value })}
               />
             </div>
           </div>
@@ -345,8 +451,8 @@ export default function AddDriver() {
                   placeholder="Enter emergency contact name"
                   required
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400"
-                  value={formData.emergencyContactName}
-                  onChange={e => setFormData({...formData, emergencyContactName: e.target.value})}
+                  value={driverForm.emergencyContactName}
+                  onChange={e => updateDriverForm({ emergencyContactName: e.target.value })}
                 />
               </div>
 
@@ -363,8 +469,8 @@ export default function AddDriver() {
                     placeholder="+234 800 000 0000"
                     required
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EC4899]/20 focus:border-[#EC4899] transition-all text-slate-800 placeholder:text-slate-400"
-                    value={formData.emergencyContactPhone}
-                    onChange={e => setFormData({...formData, emergencyContactPhone: e.target.value})}
+                    value={driverForm.emergencyContactPhone}
+                    onChange={e => updateDriverForm({ emergencyContactPhone: e.target.value })}
                   />
                 </div>
               </div>
@@ -375,10 +481,11 @@ export default function AddDriver() {
           <div className="flex justify-start gap-4 mt-8">
             <button 
               type="submit"
-              className="px-6 py-3 rounded-xl bg-[#EC4899] text-white font-medium text-[15px] hover:bg-[#db2777] transition-colors shadow-sm flex items-center gap-2"
+              disabled={isLoading}
+              className="px-6 py-3 rounded-xl bg-[#EC4899] text-white font-medium text-[15px] hover:bg-[#db2777] transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <UserPlus className="w-5 h-5" />
-              Add Driver
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+              {isLoading ? (isEdit ? "Saving..." : "Registering...") : (isEdit ? "Update Profile" : "Add Driver")}
             </button>
             <Link 
               to="/admin/team/add"

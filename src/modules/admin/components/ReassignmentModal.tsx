@@ -11,10 +11,9 @@ export default function ReassignmentModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!conflictData) return null;
-
   // Filter available buses that meet the capacity requirement
   const availableReplacements = useMemo(() => {
+    if (!conflictData) return [];
     return buses.filter(bus => 
       bus.status === 'Available' && 
       bus.id !== conflictData.busId && // Not the current bus
@@ -24,6 +23,7 @@ export default function ReassignmentModal() {
   }, [buses, conflictData, searchTerm]);
 
   const handleReassign = async () => {
+    if (!conflictData) return;
     if (!selectedNewBusId) {
       setError('Please select a replacement bus first.');
       return;
@@ -46,7 +46,9 @@ export default function ReassignmentModal() {
     }
   };
 
-  const currentBus = buses.find(b => b.id === conflictData.busId);
+  const currentBus = buses.find(b => b.id === conflictData?.busId);
+
+  if (!conflictData) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../../../shared/api';
+import toast from 'react-hot-toast';
 
 // ── Dashboard Interfaces ───────────────────────────────────────────────────────
 
@@ -44,8 +45,6 @@ export interface ActiveTripsData {
   trips: ActiveTrip[];
 }
 
-// ── Trip Interfaces ────────────────────────────────────────────────────────────
-
 export interface TripListItem {
   id: string;
   from: string;
@@ -59,36 +58,7 @@ export interface TripListItem {
   status: string;
 }
 
-export interface TripPassenger {
-  id: string;
-  seat: string;
-  name: string;
-  ticketId: string;
-  phone: string;
-  status: 'Checked In' | 'Pending' | 'No Show';
-}
-
-export interface TripDetail {
-  id: string;
-  from: string;
-  to: string;
-  date: string;
-  time: string;
-  status: string;
-  driver: string;
-  driverInitials: string;
-  driverPhone: string;
-  bus: string;
-  busCapacity: number;
-  passengers: number;
-  totalRevenue: number;
-  grossRevenue: number;
-  netRevenue: number;
-  deductions: number;
-  driverEarnings: number;
-  ticketPrice: number;
-  manifest: TripPassenger[];
-}
+// ── Search Interfaces ──────────────────────────────────────────────────────────
 
 // ── Form Option Interfaces ─────────────────────────────────────────────────────
 
@@ -125,22 +95,7 @@ interface AdminState {
   revenueTrend: RevenueTrend | null;
   activeTrips: ActiveTripsData | null;
   isLoading: boolean;
-  error: string | null;
-
-  // Trips list
-  trips: TripListItem[];
-  tripsLoading: boolean;
-  tripsError: string | null;
-
-  // Trip detail
-  currentTrip: TripDetail | null;
-  tripLoading: boolean;
-  tripError: string | null;
-
-  // Create trip options
-  busOptions: BusOption[];
-  driverOptions: DriverOption[];
-  formOptionsLoading: boolean;
+  error: { error: string; message: string } | null;
 
   // Notification count
   notificationCount: number;
@@ -151,10 +106,6 @@ interface AdminState {
 
   // Actions
   fetchAdminDashboard: () => Promise<void>;
-  fetchTrips: (filters?: FetchTripsFilters) => Promise<void>;
-  fetchTripById: (tripId: string) => Promise<void>;
-  fetchFormOptions: () => Promise<void>;
-  createTrip: (data: Record<string, string>) => Promise<void>;
   searchGlobal: (q: string) => Promise<void>;
   fetchNotificationCount: () => Promise<void>;
 }
@@ -166,24 +117,6 @@ export const useAdminStore = create<AdminState>((set) => ({
   activeTrips: null,
   isLoading: false,
   error: null,
-
-  // Trips
-  trips: [],
-  tripsLoading: false,
-  tripsError: null,
-
-  // Trip detail
-  currentTrip: null,
-  tripLoading: false,
-  tripError: null,
-
-  // Form options
-  busOptions: [],
-  driverOptions: [],
-  formOptionsLoading: false,
-
-  // Notifications
-  notificationCount: 0,
 
   // Search
   searchResults: null,
@@ -204,69 +137,20 @@ export const useAdminStore = create<AdminState>((set) => ({
         activeTrips: tripsRes.data.data,
         isLoading: false,
       });
+      toast.success('Dashboard synchronized');
     } catch (err: any) {
+      const message = err.response?.data?.message || err.message || 'Failed to load dashboard data';
       set({
-        error: err.response?.data?.message || err.message || 'Failed to load dashboard data',
+        error: {
+          error: err.response?.data?.error || 'Fetch Error',
+          message,
+        },
         isLoading: false,
       });
+      toast.error(message);
     }
   },
 
-  // ── fetchTrips ────────────────────────────────────────────────────────────
-  fetchTrips: async (filters) => {
-    set({ tripsLoading: true, tripsError: null });
-    try {
-      const query = new URLSearchParams();
-      if (filters?.status) query.append('status', filters.status);
-      if (filters?.date) query.append('date', filters.date);
-      if (filters?.searchTerm) query.append('searchTerm', filters.searchTerm);
-
-      const res = await api.get(`/admin/trips?${query.toString()}`);
-      set({ trips: res.data.data, tripsLoading: false });
-    } catch (err: any) {
-      set({
-        tripsError: err.response?.data?.message || 'Failed to load trips',
-        tripsLoading: false,
-      });
-    }
-  },
-
-  // ── fetchTripById ─────────────────────────────────────────────────────────
-  fetchTripById: async (tripId: string) => {
-    set({ tripLoading: true, tripError: null, currentTrip: null });
-    try {
-      const res = await api.get(`/admin/trips/${tripId}`);
-      set({ currentTrip: res.data.data, tripLoading: false });
-    } catch (err: any) {
-      set({
-        tripError: err.response?.data?.message || 'Failed to load trip details',
-        tripLoading: false,
-      });
-    }
-  },
-
-  // ── fetchFormOptions ──────────────────────────────────────────────────────
-  fetchFormOptions: async () => {
-    set({ formOptionsLoading: true });
-    try {
-      const [busRes, driverRes] = await Promise.all([
-        api.get('/admin/buses/available'),
-        api.get('/admin/drivers/available'),
-      ]);
-      set({
-        busOptions: busRes.data.data,
-        driverOptions: driverRes.data.data,
-        formOptionsLoading: false,
-      });
-    } catch {
-      set({ formOptionsLoading: false });
-    }
-  },
-
-  // ── createTrip ────────────────────────────────────────────────────────────
-  createTrip: async (data) => {
-    await api.post('/admin/trips', data);
-  },
 
   // ── searchGlobal ──────────────────────────────────────────────────────────
   searchGlobal: async (q: string) => {

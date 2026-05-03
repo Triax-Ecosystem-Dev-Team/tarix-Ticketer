@@ -12,7 +12,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { useAdminStore } from '../store/useAdminStore';
+import { useTripStore } from '../store/useTripStore';
 
 // ── Status Badge ──────────────────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ function SkeletonRow() {
 // ── TripOverview ──────────────────────────────────────────────────────────────
 
 const TripOverview = () => {
-  const { trips, tripsLoading, tripsError, fetchTrips } = useAdminStore();
+  const { trips, isLoading, error, fetchTrips } = useTripStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -82,11 +82,11 @@ const TripOverview = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchTrips}
-            disabled={tripsLoading}
+            onClick={() => fetchTrips()}
+            disabled={isLoading}
             className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-500 text-xs font-medium px-3.5 py-2 rounded-lg transition-all disabled:opacity-50 shadow-sm"
           >
-            <RefreshCw size={13} className={tripsLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
             Refresh
           </button>
           <Link
@@ -99,11 +99,11 @@ const TripOverview = () => {
       </div>
 
       {/* Error Banner */}
-      {tripsError && (
+      {error && (
         <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm font-medium mb-4">
-          <span>⚠️ {tripsError}</span>
+          <span>⚠️ {error}</span>
           <button
-            onClick={fetchTrips}
+            onClick={() => fetchTrips()}
             className="ml-4 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
           >
             Retry
@@ -165,10 +165,10 @@ const TripOverview = () => {
             </thead>
             <tbody className="divide-y divide-slate-50 font-sans">
               {/* Skeletons */}
-              {tripsLoading && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+              {isLoading && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
 
               {/* Live rows */}
-              {!tripsLoading &&
+              {!isLoading &&
                 trips.map((trip) => (
                   <tr key={trip.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-4">
@@ -237,14 +237,14 @@ const TripOverview = () => {
           </table>
         </div>
 
-        {!tripsLoading && trips.length === 0 && (
+        {!isLoading && trips.length === 0 && (
           <div className="p-20 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
               <Bus className="w-8 h-8 text-slate-300" />
             </div>
             <h3 className="text-lg font-bold text-[#1E293B]">No trips found</h3>
             <p className="text-slate-500 text-sm max-w-xs mt-1">
-              {tripsError ? 'Failed to load trips from the server.' : "We couldn't find any trips matching your search criteria."}
+              {error ? 'Failed to load trips from the server.' : "We couldn't find any trips matching your search criteria."}
             </p>
           </div>
         )}

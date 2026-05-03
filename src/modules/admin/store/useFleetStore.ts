@@ -65,7 +65,8 @@ interface FleetStore {
     totalTokens: number;
     dailyStats: number[];
   } | null;
-  setConflictData: (data: any | null) => void;
+  availableBuses: { id: string, label: string, capacity: number }[];
+  fetchAvailableBuses: () => Promise<void>;
 }
 
 export const useFleetStore = create<FleetStore>((set) => ({
@@ -82,6 +83,16 @@ export const useFleetStore = create<FleetStore>((set) => ({
   setConflictData: (data) => set({ conflictData: data }),
   isLoading: false,
   error: null,
+  availableBuses: [],
+
+  fetchAvailableBuses: async () => {
+    try {
+      const res = await api.get('/admin/buses/available');
+      set({ availableBuses: res.data.data });
+    } catch (err: any) {
+      console.error('Failed to fetch available buses:', err);
+    }
+  },
 
   fetchFleet: async () => {
     set({ isLoading: true, error: null });

@@ -238,7 +238,15 @@ export const router = createBrowserRouter([
         element: <AddTicketer />,
       },
       {
+        path: 'team/edit/ticketer/:id',
+        element: <AddTicketer />,
+      },
+      {
         path: 'team/add/driver',
+        element: <AddDriver />,
+      },
+      {
+        path: 'team/edit/driver/:id',
         element: <AddDriver />,
       },
       {

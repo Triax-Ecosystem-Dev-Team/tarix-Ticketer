@@ -29,21 +29,24 @@ interface AuthState {
   updatePreferences: (prefs: Partial<Pick<User, 'theme' | 'notifEmail' | 'notifSms' | 'notifPush'>>) => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  token: localStorage.getItem('token') || sessionStorage.getItem('token'),
-  isAuthenticated: !!(localStorage.getItem('token') || sessionStorage.getItem('token')),
+  token: localStorage.getItem('tarix_token') || sessionStorage.getItem('tarix_token'),
+  isAuthenticated: !!(localStorage.getItem('tarix_token') || sessionStorage.getItem('tarix_token')),
   isInitializing: true,
 
   login: async (credentials, rememberMe) => {
     try {
       const response = await api.post('/auth/login', credentials);
       const { token, ...user } = response.data.data;
+      
+      // Atomic Storage before state update
       if (rememberMe) {
-        localStorage.setItem('token', token);
+        localStorage.setItem('tarix_token', token);
       } else {
-        sessionStorage.setItem('token', token);
+        sessionStorage.setItem('tarix_token', token);
       }
+      
       set({ user, token, isAuthenticated: true });
       return user;
     } catch (error) {
@@ -52,20 +55,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('token');
-    sessionStorage.removeItem('token');
+    localStorage.removeItem('tarix_token');
+    sessionStorage.removeItem('tarix_token');
     set({ user: null, token: null, isAuthenticated: false });
   },
 
   initialize: async () => {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (token) {
+    let token = localStorage.getItem('tarix_token') || sessionStorage.getItem('tarix_token');
+    if (token && token !== 'undefined' && token !== 'null') {
       try {
         const response = await api.get('/auth/me');
         set({ user: response.data.data, isAuthenticated: true, isInitializing: false });
       } catch (error) {
-        localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
+        localStorage.removeItem('tarix_token');
+        sessionStorage.removeItem('tarix_token');
         set({ user: null, token: null, isAuthenticated: false, isInitializing: false });
       }
     } else {

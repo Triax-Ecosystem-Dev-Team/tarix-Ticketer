@@ -3,32 +3,51 @@ import { useNavigate } from 'react-router-dom';
 import {
   Info, Bus, MapPin, Calendar, Clock, User, DollarSign, Users, Loader2, CheckCircle
 } from 'lucide-react';
-import { useAdminStore } from '../store/useAdminStore';
+import { useTripStore } from '../store/useTripStore';
 import clsx from 'clsx';
+import { Wifi, Wind, Zap, Tv, ShieldCheck, Briefcase } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function CreateTrip() {
   const navigate = useNavigate();
-  const { busOptions, driverOptions, formOptionsLoading, fetchFormOptions, createTrip } = useAdminStore();
+  const { 
+    availableBuses, 
+    availableDrivers, 
+    isLoading, 
+    isSubmitting,
+    error,
+    fetchAvailableAssets,
+    createTrip 
+  } = useTripStore();
 
   const [formData, setFormData] = useState({
     busId: '',
     departureTerminal: '',
     arrivalTerminal: '',
-    date: '',
-    time: '',
+    departureDate: '',
+    departureTime: '',
     driverId: '',
     price: '',
+    availableSeats: '',
   });
 
-  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchFormOptions();
-  }, [fetchFormOptions]);
+    fetchAvailableAssets();
+  }, [fetchAvailableAssets]);
 
-  const selectedBus = busOptions.find((b) => b.id === formData.busId);
+  const selectedBus = availableBuses.find((b) => b.id === formData.busId);
+
+  // Auto-sync capacity and availableSeats
+  useEffect(() => {
+    if (selectedBus) {
+      setFormData(prev => ({ 
+        ...prev, 
+        availableSeats: selectedBus.totalCapacity.toString() 
+      }));
+    }
+  }, [selectedBus]);
 
   const handlePriceClick = (price: string) => {
     setFormData((prev) => ({ ...prev, price }));
@@ -36,16 +55,23 @@ export default function CreateTrip() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    setError(null);
     try {
-      await createTrip(formData);
+      // Standardize payload to match backend expectations
+      const payload = {
+        ...formData,
+        price: parseFloat(formData.price),
+        availableSeats: parseInt(formData.availableSeats),
+        // Map frontend fields to backend if different
+        date: formData.departureDate,
+        time: formData.departureTime
+      };
+
+      await createTrip(payload);
       setSuccess(true);
+      toast.success('Trip created successfully!');
       setTimeout(() => navigate('/admin/trips'), 1800);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create trip. Please try again.');
-    } finally {
-      setSubmitting(false);
+      toast.error(err.response?.data?.message || 'Failed to create trip');
     }
   };
 
@@ -104,21 +130,76 @@ export default function CreateTrip() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  {formOptionsLoading ? <Loader2 className="w-4 h-4 text-[#3bb6e0] animate-spin" /> : <Bus className="w-4 h-4 text-[#3bb6e0]" />}
+                  {isLoading ? <Loader2 className="w-4 h-4 text-[#3bb6e0] animate-spin" /> : <Bus className="w-4 h-4 text-[#3bb6e0]" />}
                 </div>
                 <select
                   required
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-[14px] text-slate-700 focus:outline-none focus:border-[#3bb6e0] focus:ring-1 focus:ring-[#3bb6e0] appearance-none cursor-pointer hover:border-slate-300 transition-colors disabled:opacity-60"
+                  className={clsx(
+                    "w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-[14px] text-slate-700 focus:outline-none focus:ring-1 appearance-none cursor-pointer hover:border-slate-300 transition-colors disabled:opacity-60",
+                    error?.includes("Conflict") && error.includes(selectedBus?.registrationNumber || '') 
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500" 
+                      : "border-slate-200 focus:border-[#3bb6e0] focus:ring-[#3bb6e0]"
+                  )}
                   value={formData.busId}
                   onChange={(e) => setFormData({ ...formData, busId: e.target.value })}
-                  disabled={formOptionsLoading}
+                  disabled={isLoading}
                 >
-                  <option value="" disabled>{formOptionsLoading ? 'Loading buses…' : 'Select a bus'}</option>
-                  {busOptions.map((b) => (
-                    <option key={b.id} value={b.id}>{b.label}</option>
+                  <option value="" disabled>{isLoading ? 'Loading buses…' : 'Select a bus'}</option>
+                  {availableBuses.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.registrationNumber} — {b.nickname}
+                    </option>
                   ))}
                 </select>
               </div>
+
+              {/* Vehicle Features Preview */}
+              {selectedBus && (
+                <div className="mt-3 bg-slate-50 border border-slate-100 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  {selectedBus.status === 'On Trip' && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2.5 mb-4">
+                      <Info className="w-4 h-4 text-amber-600 mt-0.5" />
+                      <p className="text-amber-700 text-[12px] font-medium leading-relaxed">
+                        <span className="font-bold">Warning:</span> This vehicle is currently <span className="font-bold">In Transit</span> and may not return in time for this departure.
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Features</span>
+                    {selectedBus.maintenanceStatus === 'Excellent' ? (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">Excellent Condition</span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-600 text-[10px] font-bold rounded-full uppercase">Maintenance Due Soon</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {['Air Conditioning', 'WiFi', 'Charging Ports', 'Entertainment System', 'Fire Extinguisher', 'Luggage Compartment'].map((amenity) => {
+                      const hasAmenity = (selectedBus.amenities || []).includes(amenity);
+                      const getIcon = () => {
+                        switch (amenity) {
+                          case 'Air Conditioning': return Wind;
+                          case 'WiFi': return Wifi;
+                          case 'Charging Ports': return Zap;
+                          case 'Entertainment System': return Tv;
+                          case 'Fire Extinguisher': return ShieldCheck;
+                          case 'Luggage Compartment': return Briefcase;
+                          default: return Info;
+                        }
+                      };
+                      const Icon = getIcon();
+                      return (
+                        <div key={amenity} className={clsx(
+                          "flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium",
+                          hasAmenity ? "bg-white text-[#0ea5e9] border border-[#bae6fd] shadow-sm" : "text-slate-400 grayscale opacity-40"
+                        )}>
+                          <Icon className="w-3.5 h-3.5" />
+                          {amenity}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Departure Terminal */}
@@ -154,8 +235,8 @@ export default function CreateTrip() {
                   type="date"
                   required
                   className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-[14px] text-slate-700 focus:outline-none focus:border-[#3bb6e0] focus:ring-1 focus:ring-[#3bb6e0] hover:border-slate-300 transition-colors"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  value={formData.departureDate}
+                  onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
                 />
               </div>
             </div>
@@ -167,18 +248,18 @@ export default function CreateTrip() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  {formOptionsLoading ? <Loader2 className="w-4 h-4 text-[#3bb6e0] animate-spin" /> : <User className="w-4 h-4 text-[#3bb6e0]" />}
+                  {isLoading ? <Loader2 className="w-4 h-4 text-[#3bb6e0] animate-spin" /> : <User className="w-4 h-4 text-[#3bb6e0]" />}
                 </div>
                 <select
                   required
                   className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-[14px] text-slate-700 focus:outline-none focus:border-[#3bb6e0] focus:ring-1 focus:ring-[#3bb6e0] appearance-none cursor-pointer hover:border-slate-300 transition-colors disabled:opacity-60"
                   value={formData.driverId}
                   onChange={(e) => setFormData({ ...formData, driverId: e.target.value })}
-                  disabled={formOptionsLoading}
+                  disabled={isLoading}
                 >
-                  <option value="" disabled>{formOptionsLoading ? 'Loading drivers…' : 'Choose a driver'}</option>
-                  {driverOptions.map((d) => (
-                    <option key={d.id} value={d.id}>{d.label}</option>
+                  <option value="" disabled>{isLoading ? 'Loading drivers…' : 'Choose a driver'}</option>
+                  {availableDrivers.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
               </div>
@@ -196,7 +277,7 @@ export default function CreateTrip() {
                 </div>
                 <input
                   type="text"
-                  value={selectedBus ? `${selectedBus.capacity} seats` : '—'}
+                  value={selectedBus ? `${selectedBus.totalCapacity} seats` : '—'}
                   readOnly
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[14px] text-slate-500 cursor-not-allowed focus:outline-none"
                 />
@@ -204,7 +285,7 @@ export default function CreateTrip() {
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 grid grid-cols-2 gap-y-3 gap-x-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] text-slate-500">Total Seats</span>
-                  <span className="text-[13px] font-semibold text-slate-700">{selectedBus?.capacity ?? '—'}</span>
+                  <span className="text-[13px] font-semibold text-slate-700">{selectedBus?.totalCapacity ?? '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] text-slate-500">Reserved</span>
@@ -212,7 +293,7 @@ export default function CreateTrip() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] text-slate-500">Available</span>
-                  <span className={clsx("text-[13px] font-bold", selectedBus ? 'text-[#10b981]' : 'text-slate-400')}>{selectedBus?.capacity ?? '—'}</span>
+                  <span className={clsx("text-[13px] font-bold", selectedBus ? 'text-[#10b981]' : 'text-slate-400')}>{selectedBus?.totalCapacity ?? '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] text-slate-500">Occupancy</span>
@@ -258,8 +339,8 @@ export default function CreateTrip() {
                   type="time"
                   required
                   className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-[14px] text-slate-700 focus:outline-none focus:border-[#3bb6e0] focus:ring-1 focus:ring-[#3bb6e0] hover:border-slate-300 transition-colors"
-                  value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                  value={formData.departureTime}
+                  onChange={(e) => setFormData({ ...formData, departureTime: e.target.value })}
                 />
               </div>
             </div>
@@ -317,7 +398,7 @@ export default function CreateTrip() {
                   <span className="text-[13.5px] text-[#94a3b8] font-medium">Estimated Revenue:</span>
                   <span className="text-[13.5px] font-medium text-[#22c55e]">
                     {formData.price && selectedBus
-                      ? `₦${(Number(formData.price) * selectedBus.capacity).toLocaleString()}`
+                      ? `₦${(Number(formData.price) * selectedBus.totalCapacity).toLocaleString()}`
                       : '₦0'}
                   </span>
                 </div>
@@ -337,11 +418,16 @@ export default function CreateTrip() {
           </button>
           <button
             type="submit"
-            disabled={submitting}
-            className="px-8 py-2.5 bg-[#0ea5e9] text-white text-[14px] font-semibold rounded-xl hover:bg-[#0284c7] transition-colors shadow-sm disabled:opacity-60 flex items-center gap-2"
+            disabled={isSubmitting}
+            className={clsx(
+              "px-8 py-2.5 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60 flex items-center gap-2",
+              error?.includes("Schedule Conflict") 
+                ? "bg-red-500 hover:bg-red-600" 
+                : "bg-[#0ea5e9] hover:bg-[#0284c7]"
+            )}
           >
-            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            {submitting ? 'Creating…' : 'Create Trip'}
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSubmitting ? 'Creating…' : error?.includes("Schedule Conflict") ? 'Conflict Found' : 'Create Trip'}
           </button>
         </div>
       </form>

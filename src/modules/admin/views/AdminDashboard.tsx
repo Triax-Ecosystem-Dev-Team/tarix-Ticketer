@@ -10,6 +10,7 @@ import {
   Clock,
   BookOpen,
   RefreshCw,
+  Loader2
 } from 'lucide-react';
 import StatCard, { StatCardSkeleton, type StatCardProps } from '../components/StatCard';
 import QuickActions from '../components/QuickActions';
@@ -111,15 +112,19 @@ function buildCards(d: DashboardStats): Cards {
 
 // ── Error banner ──────────────────────────────────────────────────────────────
 
-function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+function ErrorBanner({ error, onRetry, isLoading }: { error: { error: string; message: string }; onRetry: () => void; isLoading: boolean }) {
   return (
     <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm font-medium mb-4">
-      <span>⚠️ Failed to load stats: {message}</span>
+      <div className="flex flex-col">
+        <span className="font-bold">⚠️ {error.error}</span>
+        <span className="text-xs opacity-90">{error.message}</span>
+      </div>
       <button
         onClick={onRetry}
-        className="ml-4 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+        disabled={isLoading}
+        className="ml-4 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-50"
       >
-        Retry
+        {isLoading ? <Loader2 size={13} className="animate-spin" /> : 'Retry'}
       </button>
     </div>
   );
@@ -156,15 +161,19 @@ const AdminDashboard = () => {
           disabled={loading}
           className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50
                      text-gray-500 hover:text-gray-800 text-xs font-medium px-3.5 py-2 rounded-lg
-                     transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                     transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm min-w-[90px] justify-center"
         >
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-          {loading ? 'Loading…' : 'Refresh'}
+          {loading ? (
+            <Loader2 size={13} className="animate-spin text-[#0ea5e9]" />
+          ) : (
+            <RefreshCw size={13} />
+          )}
+          {loading ? 'Syncing...' : 'Refresh'}
         </button>
       </div>
 
       {/* ── Error ── */}
-      {error && <ErrorBanner message={error} onRetry={fetchAdminDashboard} />}
+      {error && <ErrorBanner error={error} onRetry={fetchAdminDashboard} isLoading={loading} />}
 
       {/* ── Stats ── */}
       {loading ? (

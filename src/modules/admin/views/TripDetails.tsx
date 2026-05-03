@@ -15,7 +15,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { useAdminStore, type TripPassenger } from '../store/useAdminStore';
+import { useAdminStore } from '../store/useAdminStore';
+import { useTripStore, type TripPassenger } from '../store/useTripStore';
 
 // ── Skeleton helpers ──────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ function SkeletonBlock({ w = 'w-32', h = 'h-4' }: { w?: string; h?: string }) {
 
 const TripDetails = () => {
   const { tripId } = useParams<{ tripId: string }>();
-  const { currentTrip: trip, tripLoading, tripError, fetchTripById } = useAdminStore();
+  const { currentTrip: trip, isLoading: tripLoading, error: tripError, fetchTripById } = useTripStore();
 
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');

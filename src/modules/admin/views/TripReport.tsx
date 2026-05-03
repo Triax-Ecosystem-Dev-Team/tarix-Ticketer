@@ -9,6 +9,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import clsx from 'clsx';
 import { useAdminStore } from '../store/useAdminStore';
+import { useTripStore } from '../store/useTripStore';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -20,7 +21,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 
 const TripReport = () => {
   const { tripId } = useParams<{ tripId: string }>();
-  const { currentTrip: trip, tripLoading, fetchTripById } = useAdminStore();
+  const { currentTrip: trip, isLoading: tripLoading, fetchTripById } = useTripStore();
   
   const reportRef = useRef<HTMLDivElement>(null);
   const [isExportingPDF, setIsExportingPDF] = useState(false);

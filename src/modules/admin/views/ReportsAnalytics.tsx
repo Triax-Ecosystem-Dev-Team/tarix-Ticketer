@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Calendar, BarChart2, LineChart, Bus, Users, DollarSign, 
   Download, Eye, Printer, Trash2, 
-  RefreshCw, FileSpreadsheet, Plus, Edit2, PauseCircle, X
+  RefreshCw, FileSpreadsheet, Plus, Edit2, PauseCircle, X, Loader2
 } from 'lucide-react';
 import clsx from 'clsx';
+import api from '../../../shared/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 // Mock Data
 const REPORT_CARDS = [
@@ -83,15 +87,166 @@ const REPORT_HISTORY = [
   { id: 4, name: 'Bus Performance Report - November 2025', type: 'Bus', date: 'Nov 30, 2025 at 11:00 PM', size: '3.1 MB', status: 'Ready' },
 ];
 
-const SCHEDULED_REPORTS = [
-  { id: 1, name: 'Daily Report', schedule: 'Every day at 11:30 AM', recipients: 'manager@tarix.com, admin@tarix.com', status: 'Active' },
-  { id: 2, name: 'Weekly Report', schedule: 'Every Sunday at 11:59 PM', recipients: 'manager@tarix.com', status: 'Active' },
-  { id: 3, name: 'Monthly Report', schedule: 'Last day of month at 11:59 PM', recipients: 'manager@tarix.com, finance@tarix.com', status: 'Active' },
-];
-
 export default function ReportsAnalytics() {
   const [historyFilter, setHistoryFilter] = useState('All');
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [reportStats, setReportStats] = useState<any>(null);
+  const [generatedReports, setGeneratedReports] = useState<any[]>([]);
+  const [scheduledReports, setScheduledReports] = useState<any[]>([]);
+  const [downloadMenuId, setDownloadMenuId] = useState<number | null>(null);
+  const [newSchedule, setNewSchedule] = useState({
+    reportType: 'Daily',
+    frequency: 'daily',
+    time: '11:30',
+    recipients: 'manager@tarix.com, admin@tarix.com',
+    format: 'pdf'
+  });
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.download-menu-container')) {
+        setDownloadMenuId(null);
+      }
+    };
+    if (downloadMenuId !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [downloadMenuId]);
+
+  const handleReportAction = (reportType: string, action: 'download_pdf' | 'download_excel' | 'view_pdf') => {
+    try {
+      let head: any[] = [];
+      let body: any[] = [];
+
+      if (reportType.includes('Revenue') && reportStats?.routePerformance) {
+        head = [['Route', 'Trips', 'Passengers', 'Revenue', 'Profit', 'Margin']];
+        body = reportStats.routePerformance.map((r: any) => [r.route, r.trips, r.passengers, `N${r.revenue}`, `N${r.profit}`, `${r.margin}%`]);
+      } else if (reportType.includes('Bus')) {
+        head = [['Metric', 'Value']];
+        body = [['Total Buses', reportStats?.totalBuses || 0]];
+      } else if (reportType.includes('Driver')) {
+        head = [['Metric', 'Value']];
+        body = [['Total Drivers', reportStats?.totalDrivers || 0]];
+      } else {
+        head = [['Metric', 'Value']];
+        body = [
+          ['Total Trips', reportStats?.totalTrips || 0],
+          ['Today Trips', reportStats?.todayTrips || 0],
+          ['Total Revenue', `N${reportStats?.summary?.totalRevenue || 0}`]
+        ];
+      }
+
+      if (action === 'download_excel') {
+        const ws = XLSX.utils.aoa_to_sheet([head[0], ...body]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Report");
+        XLSX.writeFile(wb, `Tarix_${reportType.replace(/\s+/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      } else {
+        const doc = new jsPDF();
+        doc.text(`Tarix ${reportType} Report`, 14, 15);
+        autoTable(doc, { startY: 20, head, body });
+        
+        if (action === 'view_pdf') {
+          const string = doc.output('bloburl');
+          window.open(string, '_blank');
+          return; // Do not log generation to db for just viewing
+        } else {
+          doc.save(`Tarix_${reportType.replace(/\s+/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        }
+      }
+
+      const newReport = {
+        id: Date.now(),
+        name: `${reportType} Report`,
+        type: reportType.split(' ')[0],
+        date: new Date().toLocaleString(),
+        size: '124 KB',
+        status: 'Ready'
+      };
+      setGeneratedReports(prev => [newReport, ...prev]);
+
+      api.post('/reports/history', {
+        reportType,
+        format: action === 'download_excel' ? 'excel' : 'pdf',
+        size: '124 KB'
+      }).catch(err => console.error("Failed to log report history", err));
+
+    } catch (err) {
+      console.error("Action failed", err);
+    }
+  };
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [statsRes, historyRes, schedulesRes] = await Promise.all([
+        api.get('/analytics/revenue'),
+        api.get('/reports/history').catch(() => ({ data: { data: [] } })),
+        api.get('/reports/schedules').catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      if (statsRes?.data?.data) {
+        setReportStats({
+          ...statsRes.data.data.reportStats,
+          summary: statsRes.data.data.summary
+        });
+      }
+      
+      if (historyRes?.data?.data) {
+        setGeneratedReports(historyRes.data.data.map((r: any) => ({
+          ...r,
+          date: new Date(r.generatedAt).toLocaleString(),
+          size: r.size || 'Unknown'
+        })));
+      }
+
+      if (schedulesRes?.data?.data) {
+        setScheduledReports(schedulesRes.data.data.map((s: any) => ({
+          ...s,
+          name: `${s.reportType} Report`,
+          schedule: `Every ${s.frequency} at ${s.time}`
+        })));
+      }
+      
+    } catch (error) {
+      console.error('Failed to fetch report data', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateSchedule = async () => {
+    try {
+      await api.post('/reports/schedules', newSchedule);
+      setIsScheduleModalOpen(false);
+      fetchData(); // Refresh to show new schedule
+    } catch (err) {
+      console.error('Failed to create schedule', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const dynamicCards = REPORT_CARDS.map(card => {
+    let updatedMetric = "No data available";
+    if (reportStats) {
+      switch(card.id) {
+        case 1: updatedMetric = `${reportStats.todayTrips || 0} trips today`; break;
+        case 2: updatedMetric = `${reportStats.totalTrips || 0} total trips`; break;
+        case 3: updatedMetric = `${reportStats.totalTrips || 0} total trips`; break;
+        case 4: updatedMetric = `${reportStats.totalBuses || 0} buses tracked`; break;
+        case 5: updatedMetric = `${reportStats.totalDrivers || 0} drivers tracked`; break;
+        case 6: updatedMetric = `₦${(reportStats.summary?.totalRevenue || 0).toLocaleString()} revenue`; break;
+      }
+    }
+    return { ...card, metric: updatedMetric };
+  });
 
   return (
     <div className="max-w-7xl mx-auto w-full animate-in fade-in duration-300 pb-10">
@@ -112,12 +267,15 @@ export default function ReportsAnalytics() {
           </div>
           
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 bg-white text-[#0ea5e9] px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-sm hover:bg-slate-50 transition-colors">
+            <button 
+              onClick={() => handleReportAction('Full Business Summary', 'download_pdf')}
+              className="flex items-center gap-2 bg-white text-[#0ea5e9] px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-sm hover:bg-slate-50 transition-colors"
+            >
               <FileSpreadsheet className="w-4 h-4" />
               Generate Report
             </button>
-            <button className="p-2.5 text-white border-2 border-white/30 rounded-xl hover:bg-white/10 transition-colors">
-              <RefreshCw className="w-5 h-5" />
+            <button onClick={fetchData} className="p-2.5 text-white border-2 border-white/30 rounded-xl hover:bg-white/10 transition-colors">
+              <RefreshCw className={clsx("w-5 h-5", isLoading && "animate-spin")} />
             </button>
           </div>
         </div>
@@ -125,40 +283,76 @@ export default function ReportsAnalytics() {
 
       <div className="relative z-10 -mt-24 mb-8">
         {/* ── Report Type Cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {REPORT_CARDS.map((card) => (
-            <div key={card.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col hover:border-[#0ea5e9]/30 hover:shadow-md transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div className={clsx("w-12 h-12 rounded-xl flex items-center justify-center", card.bgColor)}>
-                  <card.icon className={clsx("w-6 h-6", card.color)} />
+        {isLoading ? (
+          <div className="flex items-center justify-center min-h-[300px] bg-white/40 backdrop-blur-md rounded-3xl border border-slate-100 shadow-sm mb-8">
+            <Loader2 className="w-10 h-10 animate-spin text-[#0ea5e9]" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {dynamicCards.map((card) => (
+              <div key={card.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col hover:border-[#0ea5e9]/30 hover:shadow-md transition-all">
+                <div className="flex justify-between items-start mb-4">
+                  <div className={clsx("w-12 h-12 rounded-xl flex items-center justify-center", card.bgColor)}>
+                    <card.icon className={clsx("w-6 h-6", card.color)} />
+                  </div>
+                  <span className="bg-[#10b981] text-white text-[11px] font-bold px-2.5 py-1 rounded-full tracking-wide">
+                    {card.status}
+                  </span>
                 </div>
-                <span className="bg-[#10b981] text-white text-[11px] font-bold px-2.5 py-1 rounded-full tracking-wide">
-                  {card.status}
-                </span>
-              </div>
-              
-              <h3 className="text-[17px] font-bold text-[#1e293b] mb-1.5">{card.title}</h3>
-              <p className="text-[13px] text-slate-500 mb-6 flex-1">{card.description}</p>
-              
-              <div className="mb-6 space-y-1">
-                <p className="text-[12px] text-slate-400 font-medium">{card.generated}</p>
-                <p className="text-[13px] font-bold text-[#1e293b]">{card.metric}</p>
-              </div>
+                
+                <h3 className="text-[17px] font-bold text-[#1e293b] mb-1.5">{card.title}</h3>
+                <p className="text-[13px] text-slate-500 mb-6 flex-1">{card.description}</p>
+                
+                <div className="mb-6 space-y-1">
+                  <p className="text-[12px] text-slate-400 font-medium">{card.generated}</p>
+                  <p className="text-[13px] font-bold text-[#1e293b]">{card.metric}</p>
+                </div>
 
-              <div className="flex items-center gap-2 pt-4 border-t border-slate-100 mt-auto">
-                <button className="flex-1 flex justify-center items-center gap-2 py-2 border border-[#0ea5e9]/20 text-[#0ea5e9] bg-[#f0f9ff] hover:bg-[#e0f2fe] rounded-xl text-[13px] font-semibold transition-colors">
-                  <Eye className="w-4 h-4" /> View
-                </button>
-                <button className="flex-1 flex justify-center items-center gap-2 py-2 border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 rounded-xl text-[13px] font-semibold transition-colors">
-                  <Download className="w-4 h-4" /> Download
-                </button>
-                <button className="p-2 border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 rounded-xl transition-colors shrink-0">
-                  <Printer className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2 pt-4 border-t border-slate-100 mt-auto">
+                  <button 
+                    onClick={() => handleReportAction(card.title, 'view_pdf')}
+                    className="flex-1 flex justify-center items-center gap-2 py-2 border border-[#0ea5e9]/20 text-[#0ea5e9] bg-[#f0f9ff] hover:bg-[#e0f2fe] rounded-xl text-[13px] font-semibold transition-colors"
+                  >
+                    <Eye className="w-4 h-4" /> View
+                  </button>
+                  
+                  <div className="relative flex-1 download-menu-container">
+                    <button 
+                      onClick={() => setDownloadMenuId(downloadMenuId === card.id ? null : card.id)}
+                      className="w-full flex justify-center items-center gap-2 py-2 border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 rounded-xl text-[13px] font-semibold transition-colors"
+                    >
+                      <Download className="w-4 h-4" /> Download
+                    </button>
+                    
+                    {downloadMenuId === card.id && (
+                      <div className="absolute bottom-full left-0 w-full mb-2 bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden z-50">
+                        <button 
+                          onClick={() => { handleReportAction(card.title, 'download_pdf'); setDownloadMenuId(null); }}
+                          className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50"
+                        >
+                          As PDF
+                        </button>
+                        <button 
+                          onClick={() => { handleReportAction(card.title, 'download_excel'); setDownloadMenuId(null); }}
+                          className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          As Excel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button 
+                    onClick={() => handleReportAction(card.title, 'view_pdf')}
+                    className="p-2 border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 rounded-xl transition-colors shrink-0"
+                  >
+                    <Printer className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* ── Report History ── */}
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 mb-8">
@@ -198,7 +392,12 @@ export default function ReportsAnalytics() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50/80">
-                {REPORT_HISTORY.filter(report => historyFilter === 'All' || report.type === historyFilter).map((report) => (
+                {generatedReports.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400 text-[13.5px]">No reports generated yet. Click 'Generate Report' or download a card above.</td>
+                  </tr>
+                )}
+                {generatedReports.filter(report => historyFilter === 'All' || report.type === historyFilter || report.name.includes(historyFilter)).map((report) => (
                   <tr key={report.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="py-4 px-4">
                       <p className="text-[13.5px] font-semibold text-[#1e293b] mb-1">{report.name}</p>
@@ -250,7 +449,10 @@ export default function ReportsAnalytics() {
           </div>
 
           <div className="space-y-4">
-            {SCHEDULED_REPORTS.map((schedule) => (
+            {scheduledReports.length === 0 && (
+              <p className="text-slate-500 text-[13.5px] py-4">No automated reports scheduled yet. Click 'Schedule New Report'.</p>
+            )}
+            {scheduledReports.map((schedule) => (
               <div key={schedule.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border border-slate-100 rounded-2xl hover:border-[#0ea5e9]/30 hover:bg-slate-50/50 transition-all gap-4">
                 <div>
                   <h3 className="text-[14.5px] font-bold text-[#1e293b] mb-1.5">{schedule.name}</h3>
@@ -311,14 +513,17 @@ export default function ReportsAnalytics() {
                 <label className="block text-[13.5px] font-semibold text-[#1e293b] mb-2">
                   Report Type <span className="text-[#ef4444]">*</span>
                 </label>
-                <select className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all appearance-none cursor-pointer">
-                  <option value="" disabled selected>Select report type</option>
-                  <option value="daily">Daily Report</option>
-                  <option value="weekly">Weekly Report</option>
-                  <option value="monthly">Monthly Report</option>
-                  <option value="bus">Bus Performance Report</option>
-                  <option value="driver">Driver Report</option>
-                  <option value="revenue">Revenue Report</option>
+                <select 
+                  value={newSchedule.reportType} 
+                  onChange={(e) => setNewSchedule({...newSchedule, reportType: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all appearance-none cursor-pointer"
+                >
+                  <option value="Daily">Daily Report</option>
+                  <option value="Weekly">Weekly Report</option>
+                  <option value="Monthly">Monthly Report</option>
+                  <option value="Bus">Bus Performance Report</option>
+                  <option value="Driver">Driver Report</option>
+                  <option value="Revenue">Revenue Report</option>
                 </select>
               </div>
 
@@ -329,7 +534,7 @@ export default function ReportsAnalytics() {
                 <div className="space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer group">
                     <div className="relative flex items-center justify-center w-5 h-5">
-                      <input type="radio" name="frequency" value="daily" defaultChecked className="peer sr-only" />
+                      <input type="radio" name="frequency" value="daily" checked={newSchedule.frequency === 'daily'} onChange={() => setNewSchedule({...newSchedule, frequency: 'daily'})} className="peer sr-only" />
                       <div className="w-5 h-5 border-2 border-slate-300 rounded-full peer-checked:border-[#0ea5e9] peer-checked:bg-[#0ea5e9] transition-colors"></div>
                       <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity"></div>
                     </div>
@@ -359,7 +564,12 @@ export default function ReportsAnalytics() {
                   Time <span className="text-[#ef4444]">*</span>
                 </label>
                 <div className="relative">
-                  <input type="time" defaultValue="11:30" className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all" />
+                  <input 
+                    type="time" 
+                    value={newSchedule.time} 
+                    onChange={(e) => setNewSchedule({...newSchedule, time: e.target.value})}
+                    className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all" 
+                  />
                 </div>
               </div>
 
@@ -369,7 +579,8 @@ export default function ReportsAnalytics() {
                 </label>
                 <input 
                   type="text" 
-                  defaultValue="manager@tarix.com, admin@tarix.com" 
+                  value={newSchedule.recipients} 
+                  onChange={(e) => setNewSchedule({...newSchedule, recipients: e.target.value})}
                   className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] text-slate-500 focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-all mb-2" 
                 />
                 <button className="text-[13px] font-medium text-[#0ea5e9] hover:underline flex items-center gap-1">
@@ -419,7 +630,10 @@ export default function ReportsAnalytics() {
               >
                 Cancel
               </button>
-              <button className="px-6 py-2.5 bg-[#0ea5e9] text-white rounded-xl text-[14px] font-bold hover:bg-[#0284c7] shadow-sm transition-colors">
+              <button 
+                onClick={handleCreateSchedule}
+                className="px-6 py-2.5 bg-[#0ea5e9] text-white rounded-xl text-[14px] font-bold hover:bg-[#0284c7] shadow-sm transition-colors"
+              >
                 Schedule Report
               </button>
             </div>

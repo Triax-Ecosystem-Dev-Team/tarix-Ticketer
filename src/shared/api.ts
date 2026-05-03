@@ -1,36 +1,32 @@
 import axios from 'axios';
 
-// Create an Axios instance with base URL of the backend
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
 
-// Add a request interceptor to automatically attach the JWT token
+// Request Interceptor: Attach JWT
 api.interceptors.request.use(
-    (config: any) => {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        if (token) {
+    (config) => {
+        let token = localStorage.getItem('tarix_token') || sessionStorage.getItem('tarix_token');
+        if (token && token !== 'undefined' && token !== 'null') {
+            // Strip errant quotes just in case it was JSON.stringified
+            token = token.replace(/['"]+/g, '');
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
-    (error: any) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle global errors (like token expiration)
+// Response Interceptor: Global Error Boundary
 api.interceptors.response.use(
-    (response: any) => {
-        return response;
-    },
-    (error: any) => {
-        if (error.response && error.response.status === 401) {
-            // Token expired or invalid
-            localStorage.removeItem('token');
-            sessionStorage.removeItem('token');
-            // Optionally dispatch an event or redirect to login
-            window.dispatchEvent(new Event('auth:unauthorized'));
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('tarix_token');
+            sessionStorage.removeItem('tarix_token');
+            // Hard redirect to login for security compliance
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }

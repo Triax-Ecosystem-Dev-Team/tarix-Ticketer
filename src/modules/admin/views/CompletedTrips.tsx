@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAdminStore } from '../store/useAdminStore';
+import { useTripStore } from '../store/useTripStore';
 
 // ── Skeleton Row ──────────────────────────────────────────────────────────────
 function SkeletonRow() {
@@ -30,7 +31,8 @@ function SkeletonRow() {
 }
 
 const CompletedTrips = () => {
-  const { trips, tripsLoading, fetchTrips, dashboardStats, fetchAdminDashboard } = useAdminStore();
+  const { dashboardStats, fetchAdminDashboard } = useAdminStore();
+  const { trips = [], isLoading: tripsLoading, fetchTrips } = useTripStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
@@ -190,7 +192,7 @@ const CompletedTrips = () => {
             <tbody className="divide-y divide-slate-50">
               {tripsLoading && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
 
-              {!tripsLoading && trips.length === 0 && (
+              {!tripsLoading && (!trips || trips.length === 0) && (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-500 font-medium">
                     No completed trips found.
@@ -198,7 +200,7 @@ const CompletedTrips = () => {
                 </tr>
               )}
 
-              {!tripsLoading && trips.map((trip) => (
+              {!tripsLoading && trips && trips.map((trip) => (
                 <tr key={trip.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <Link 

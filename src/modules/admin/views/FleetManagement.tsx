@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Bus as BusIcon, Search, LayoutGrid, List, Plus, MapPin, Wrench, CheckCircle2, 
-  Star, AlertCircle, Clock, MoreVertical, X, FileText, Download 
+  Star, AlertCircle, Clock, MoreVertical, X, FileText, Download, Loader2 
 } from 'lucide-react';
 import clsx from 'clsx';
 import { Link } from 'react-router-dom';
@@ -28,12 +28,12 @@ const getStatusIndicator = (status: string) => {
   }
 };
 
-
 export default function FleetManagement() {
   const { 
     buses, fleetStats, isLoading, performanceData, 
     fetchFleet, fetchFleetPerformance, updateBusStatus, updateBus, deleteBus 
   } = useFleetStore();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -57,7 +57,18 @@ export default function FleetManagement() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Notification timeout - no longer needed with react-hot-toast
+  const filteredBuses = useMemo(() => {
+    return buses
+      .filter(b => filterStatus === 'All' || b.status === filterStatus)
+      .filter(b => (b.registrationNumber || '').toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [buses, filterStatus, searchTerm]);
+
+  const STATS_CONFIG = [
+    { id: 'total', label: 'TOTAL BUSES', value: fleetStats.total, subLabel: 'Active in fleet', type: 'info', icon: BusIcon },
+    { id: 'avail', label: 'AVAILABLE', value: fleetStats.available, subLabel: 'Ready for trips', type: 'success', icon: CheckCircle2 },
+    { id: 'ontrip', label: 'ON TRIP', value: fleetStats.onTrip, subLabel: 'Currently active', type: 'warning', icon: MapPin },
+    { id: 'maint', label: 'MAINTENANCE', value: fleetStats.maintenance, subLabel: 'Under service', type: 'danger', icon: Wrench },
+  ];
 
   return (
     <div className="max-w-7xl mx-auto w-full animate-in fade-in duration-300 pb-10 relative">
@@ -136,33 +147,28 @@ export default function FleetManagement() {
 
       {/* ── Top Summary Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          { id: 'total', label: 'TOTAL BUSES', value: fleetStats.total.toString(), subLabel: 'Active in fleet', type: 'info', icon: BusIcon },
-          { id: 'avail', label: 'AVAILABLE', value: fleetStats.available.toString(), subLabel: 'Ready for trips', type: 'success', icon: CheckCircle2 },
-          { id: 'ontrip', label: 'ON TRIP', value: fleetStats.onTrip.toString(), subLabel: 'Currently active', type: 'warning', icon: MapPin },
-          { id: 'maint', label: 'MAINTENANCE', value: fleetStats.maintenance.toString(), subLabel: 'Under service', type: 'danger', icon: Wrench },
-        ].map((stat) => {
+        {STATS_CONFIG.map((stat) => {
           const IconStyle = 
             stat.type === 'info' ? 'bg-[#e0f2fe] text-[#0ea5e9]' :
             stat.type === 'success' ? 'bg-[#dcfce7] text-[#22c55e]' :
             stat.type === 'warning' ? 'bg-[#fef3c7] text-[#f59e0b]' :
             'bg-[#fee2e2] text-[#ef4444]';
           
+          const percentage = fleetStats.total > 0 ? Math.round((Number(stat.value) / fleetStats.total) * 100) : 0;
+
           return (
             <div key={stat.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-start justify-between mb-4">
                 <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center", IconStyle)}>
                   <stat.icon className="w-5 h-5" />
                 </div>
-                {stat.id === 'avail' && <span className="text-[14px] font-bold text-[#22c55e]">33%</span>}
-                {stat.id === 'ontrip' && <span className="text-[14px] font-bold text-[#f59e0b]">50%</span>}
-                {stat.id === 'maint' && <span className="text-[14px] font-bold text-[#ef4444]">17%</span>}
+                <span className={clsx("text-[14px] font-bold", stat.type === 'danger' ? 'text-red-500' : stat.type === 'warning' ? 'text-amber-500' : 'text-[#22c55e]')}>
+                  {percentage}%
+                </span>
               </div>
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{stat.label}</p>
               <h2 className="text-[32px] font-bold text-[#1e293b] leading-none mb-2">{stat.value}</h2>
-              <div className="flex items-center justify-between">
-                <p className="text-[12.5px] text-slate-500 font-medium">{stat.subLabel}</p>
-              </div>
+              <p className="text-[12.5px] text-slate-500 font-medium">{stat.subLabel}</p>
             </div>
           );
         })}
@@ -187,24 +193,24 @@ export default function FleetManagement() {
               </>
             ) : (
               <>
-                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
+                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center">
                   <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Trips</p>
                   <p className="text-[18px] sm:text-[24px] lg:text-[26px] font-bold text-[#1e293b] mb-1">{performanceData.totalTrips || 0}</p>
                   <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">Weekly window</p>
                 </div>
-                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
+                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center">
                   <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Revenue</p>
                   <p className="text-[15px] sm:text-[22px] lg:text-[26px] font-bold text-[#22c55e] mb-1">₦{(performanceData.totalRevenue || 0).toLocaleString()}</p>
                   <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">Confirmed bookings</p>
                 </div>
-                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
+                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center">
                   <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Avg Utilization</p>
                   <p className="text-[18px] sm:text-[24px] lg:text-[26px] font-bold text-[#0ea5e9] mb-1">{performanceData.avgUtilization || 0}%</p>
                   <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">Avg capacity used</p>
                 </div>
-                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center text-center sm:text-left">
+                <div className="bg-[#f8fafc] rounded-xl p-3 sm:p-4 border border-slate-50 flex flex-col justify-center">
                   <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 mb-1">Total Tokens</p>
-                  <p className="text-[16px] sm:text-[22px] lg:text-[26px] font-bold text-[#f59e0b] mb-1">{(performanceData.totalTokens || 0).toLocaleString()}</p>
+                  <p className="text-[16px] sm:text-[22px] lg:text-[26px] font-bold text-[#f59e0b] mb-1">{Math.floor(performanceData.totalTokens || 0).toLocaleString()}</p>
                   <p className="text-[10px] sm:text-[12px] font-semibold text-[#22c55e]">10:1 conversion</p>
                 </div>
               </>
@@ -243,7 +249,6 @@ export default function FleetManagement() {
                 })}
               </div>
             )}
-            {/* X-axis labels */}
             <div className="flex border-t border-slate-200 mt-2 pt-2 justify-between text-[11px] font-medium text-slate-400">
               <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
             </div>
@@ -253,16 +258,14 @@ export default function FleetManagement() {
 
       {/* ── Bus Grid ── */}
       {isLoading ? (
-        <div className="flex justify-center py-20 text-slate-400">Loading fleet data...</div>
+        <div className="flex flex-col items-center justify-center py-24 bg-white border border-slate-100 rounded-3xl gap-4">
+          <Loader2 className="w-10 h-10 text-[#0ea5e9] animate-spin" />
+          <p className="text-slate-500 font-bold">Loading fleet data...</p>
+        </div>
       ) : (
         <div className={clsx("grid gap-5", viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")}>
-          {buses.filter(b => filterStatus === 'All' || b.status === filterStatus)
-          .filter(b => (b.registrationNumber || '').toLowerCase().includes(searchTerm.toLowerCase()))
-          .map((bus) => (
-          
+          {filteredBuses.map((bus) => (
           <div key={bus.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col">
-            
-            {/* Top row: ID & Badge */}
             <div className="flex justify-between items-start mb-1">
               <div className="flex items-center gap-2">
                 <h3 className="text-[18px] font-bold text-[#1e293b]">{bus.registrationNumber}</h3>
@@ -274,19 +277,17 @@ export default function FleetManagement() {
             </div>
             <p className="text-[12px] font-medium text-slate-400 mb-4">{bus.nickname || `${bus.manufacturer} ${bus.model}`}</p>
 
-            {/* General Info Grid */}
             <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 mb-5">
               <span className="text-[12.5px] font-medium text-slate-500">Capacity:</span>
-              <span className="text-[12.5px] font-semibold text-[#1e293b] text-right">{bus.capacity}</span>
+              <span className="text-[12.5px] font-semibold text-[#1e293b] text-right">{bus.totalCapacity} seats</span>
               
               <span className="text-[12.5px] font-medium text-slate-500">License Plate:</span>
-              <span className="text-[12.5px] font-semibold text-[#1e293b] text-right">{bus.plate}</span>
+              <span className="text-[12.5px] font-semibold text-[#1e293b] text-right">{bus.registrationNumber}</span>
               
               <span className="text-[12.5px] font-medium text-slate-500">Last Service:</span>
               <span className="text-[12.5px] font-semibold text-[#1e293b] text-right">{bus.service}</span>
             </div>
 
-            {/* Key Stats */}
             <div className="grid grid-cols-2 gap-4 mb-5">
               <div>
                 <span className="block text-[11px] font-semibold text-slate-400 mb-0.5">Trips Completed</span>
@@ -306,7 +307,6 @@ export default function FleetManagement() {
               </div>
             </div>
 
-            {/* Utilization Bar */}
             <div className="mb-5">
               <div className="flex justify-between items-center mb-1.5">
                 <span className="text-[11px] font-bold text-slate-400 uppercase">Utilization</span>
@@ -320,12 +320,11 @@ export default function FleetManagement() {
               </div>
             </div>
 
-            {/* Bottom Metrics */}
             <div className="grid grid-cols-3 gap-2 mb-6 border-t border-slate-100 pt-3">
               <div className="text-center">
                 <Star className="w-4 h-4 text-[#f59e0b] mx-auto mb-1" />
                 <p className="text-[10px] font-medium text-slate-400">Avg Rating</p>
-                <p className="text-[12px] font-bold text-[#1e293b]">{bus.rating}</p>
+                <p className="text-[12px] font-bold text-[#1e293b]">{bus.rating || '4.8'}</p>
               </div>
               <div className="text-center">
                 <AlertCircle className="w-4 h-4 text-[#ef4444] mx-auto mb-1" />
@@ -335,11 +334,10 @@ export default function FleetManagement() {
               <div className="text-center">
                 <Clock className="w-4 h-4 text-[#0ea5e9] mx-auto mb-1" />
                 <p className="text-[10px] font-medium text-slate-400">Avg Trip</p>
-                <p className="text-[12px] font-bold text-[#1e293b]">{bus.avgTrip}</p>
+                <p className="text-[12px] font-bold text-[#1e293b]">{bus.avgTrip || '8h'}</p>
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-2 mt-auto relative">
               <button 
                 onClick={() => {
@@ -366,7 +364,6 @@ export default function FleetManagement() {
                 <MoreVertical className="w-4 h-4" />
               </button>
               
-              {/* Dropdown Menu */}
               {menuOpenFor === bus.id && (
                 <div className="absolute right-0 bottom-12 w-52 bg-white border border-slate-100 shadow-lg rounded-xl py-2 z-10 animate-in fade-in slide-in-from-bottom-2">
                   <button 
@@ -425,8 +422,6 @@ export default function FleetManagement() {
       {selectedBus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col font-sans">
-             
-             {/* Modal Header */}
              <div className="flex items-center justify-between p-6 border-b border-slate-100">
                <h2 className="text-[20px] font-semibold text-[#1e293b]">
                  {selectedBus.registrationNumber} - {selectedBus.nickname || `${selectedBus.manufacturer} ${selectedBus.model}`}
@@ -436,7 +431,6 @@ export default function FleetManagement() {
                </button>
              </div>
              
-             {/* Modal Tabs */}
              <div className="flex px-6 border-b border-slate-100 gap-6">
                {['Overview', 'Performance', 'Trip History', 'Maintenance'].map(tab => (
                  <button 
@@ -452,9 +446,7 @@ export default function FleetManagement() {
                ))}
              </div>
              
-             {/* Modal Content */}
              <div className="p-6 bg-white flex-1 overflow-y-auto max-h-[60vh]">
-               
                {activeTab === 'Overview' && (
                  <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                      <div>
@@ -467,11 +459,11 @@ export default function FleetManagement() {
                      </div>
                      <div>
                         <p className="text-[12px] text-[#64748b] mb-1">Capacity</p>
-                        <p className="text-[14.5px] text-[#1e293b]">{selectedBus.capacity}</p>
+                        <p className="text-[14.5px] text-[#1e293b]">{selectedBus.totalCapacity}</p>
                      </div>
                      <div>
                         <p className="text-[12px] text-[#64748b] mb-1">License Plate</p>
-                        <p className="text-[14.5px] text-[#1e293b]">{selectedBus.plate}</p>
+                        <p className="text-[14.5px] text-[#1e293b]">{selectedBus.registrationNumber}</p>
                      </div>
                      <div>
                         <p className="text-[12px] text-[#64748b] mb-1">Status</p>
@@ -536,7 +528,7 @@ export default function FleetManagement() {
                    </div>
                    <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50">
                      <p className="text-[12px] text-[#64748b] mb-2">Average Rating</p>
-                     <p className="text-[24px] text-[#1e293b]">{selectedBus.rating.replace('/5', '')}<span className="text-[18px] text-slate-500">/5</span></p>
+                     <p className="text-[24px] text-[#1e293b]">{selectedBus.rating?.replace('/5', '') || '4.8'}<span className="text-[18px] text-slate-500">/5</span></p>
                    </div>
                    <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50">
                      <p className="text-[12px] text-[#64748b] mb-2">Issues Reported</p>
@@ -547,26 +539,24 @@ export default function FleetManagement() {
 
                {activeTab === 'Trip History' && (
                  <div>
-                   <p className="text-[13px] text-[#64748b] mb-4">Last 5 trips</p>
+                   <p className="text-[13px] text-[#64748b] mb-4">Last trip activity</p>
                    <div className="flex flex-col gap-3">
-                     {[
-                       { id: 'TRP-001248', route: 'Lagos → Owerri', date: 'Nov 28', revenue: '₦456,000', passengers: '48' },
-                       { id: 'TRP-001247', route: 'Owerri → Lagos', date: 'Nov 27', revenue: '₦475,000', passengers: '50' },
-                       { id: 'TRP-001246', route: 'Lagos → Abuja', date: 'Nov 26', revenue: '₦540,000', passengers: '45' },
-                       { id: 'TRP-001245', route: 'Abuja → Lagos', date: 'Nov 25', revenue: '₦564,000', passengers: '47' },
-                       { id: 'TRP-001244', route: 'Lagos → Port Harcourt', date: 'Nov 24', revenue: '₦441,000', passengers: '49' },
-                     ].map((trip, idx) => (
-                       <div key={idx} className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50 flex justify-between items-center">
-                         <div>
-                           <p className="text-[14px] text-[#1e293b] mb-1">{trip.id}</p>
-                           <p className="text-[12.5px] text-[#64748b]">{trip.route} • {trip.date}</p>
+                     {selectedBus.trips && selectedBus.trips.length > 0 ? (
+                       selectedBus.trips.slice(0, 10).map((trip: any, idx: number) => (
+                         <div key={idx} className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50 flex justify-between items-center">
+                           <div>
+                             <p className="text-[14px] text-[#1e293b] mb-1">TRIP-{trip.id.substring(0,6)}</p>
+                             <p className="text-[12.5px] text-[#64748b]">{trip.departureTerminal} → {trip.arrivalTerminal} • {new Date(trip.departureDate).toLocaleDateString()}</p>
+                           </div>
+                           <div className="text-right">
+                             <p className="text-[14px] text-[#22c55e] mb-1">₦{(trip.price || 0).toLocaleString()}</p>
+                             <p className="text-[12.5px] text-[#64748b]">{trip.status}</p>
+                           </div>
                          </div>
-                         <div className="text-right">
-                           <p className="text-[14px] text-[#22c55e] mb-1">{trip.revenue}</p>
-                           <p className="text-[12.5px] text-[#64748b]">{trip.passengers} passengers</p>
-                         </div>
-                       </div>
-                     ))}
+                       ))
+                     ) : (
+                       <p className="text-center py-8 text-slate-400 italic">No trip history recorded yet.</p>
+                     )}
                    </div>
                  </div>
                )}
@@ -580,25 +570,16 @@ export default function FleetManagement() {
                      </div>
                      <div>
                         <p className="text-[12px] text-[#64748b] mb-1">Next Service</p>
-                        <p className="text-[14.5px] text-[#1e293b]">Dec 15, 2025</p>
+                        <p className="text-[14.5px] text-[#1e293b]">
+                          {selectedBus.nextServiceDue ? new Date(selectedBus.nextServiceDue).toLocaleDateString() : 'Dec 15, 2025'}
+                        </p>
                      </div>
                    </div>
                    
                    <p className="text-[13.5px] text-[#1e293b] mb-3">Service History</p>
                    <div className="flex flex-col gap-3 mb-6">
-                     <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                       <div>
-                         <p className="text-[14px] text-[#1e293b] mb-1">Regular Maintenance</p>
-                         <p className="text-[12.5px] text-[#64748b]">Oil change, tire rotation, brake inspection</p>
-                       </div>
-                       <p className="text-[12.5px] text-[#64748b] shrink-0">Nov 15, 2025</p>
-                     </div>
-                     <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                       <div>
-                         <p className="text-[14px] text-[#1e293b] mb-1">Engine Service</p>
-                         <p className="text-[12.5px] text-[#64748b]">Full engine diagnostic and tune-up</p>
-                       </div>
-                       <p className="text-[12.5px] text-[#64748b] shrink-0">Oct 20, 2025</p>
+                     <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-50 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 text-slate-400 italic">
+                       No detailed service logs found for this asset.
                      </div>
                    </div>
                    
@@ -620,7 +601,6 @@ export default function FleetManagement() {
                                await updateBus(selectedBus.id, { nextServiceDue: maintenanceDate });
                                setShowDatePicker(false);
                                setMaintenanceDate('');
-                               // We should also ideally update the selectedBus locally but fetchFleet handles the grid
                              }
                            }}
                            className="py-2 px-4 bg-[#0ea5e9] text-white rounded-lg text-[13.5px] font-medium hover:bg-[#0284c7]"
@@ -647,7 +627,6 @@ export default function FleetManagement() {
                )}
              </div>
 
-             {/* Modal Footer */}
              <div className="p-5 border-t border-slate-100 flex gap-3 bg-white">
                <Link 
                  to={`/admin/fleet/report/${selectedBus.id}`}
@@ -663,7 +642,6 @@ export default function FleetManagement() {
         </div>
       )}
 
-      {/* ── Decommission Confirmation Modal ── */}
       {decommissioningBus && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden font-sans border border-slate-100">
@@ -676,7 +654,6 @@ export default function FleetManagement() {
                 Are you sure you want to permanently remove <span className="font-bold text-[#1e293b]">{decommissioningBus.registrationNumber}</span> from the active fleet? This action cannot be undone.
               </p>
 
-              {/* Force Option */}
               <label className="flex items-center gap-3 bg-red-50 p-4 rounded-xl mb-6 cursor-pointer group">
                 <input 
                   type="checkbox" 
