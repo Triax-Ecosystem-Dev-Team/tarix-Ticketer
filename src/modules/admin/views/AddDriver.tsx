@@ -88,11 +88,11 @@ export default function AddDriver() {
       <div className="max-w-4xl mx-auto w-full">
         {/* Header */}
         <Link 
-          to="/admin/team/add" 
+          to="/admin/team" 
           className="inline-flex items-center text-[#64748B] hover:text-[#EC4899] mb-6 transition-colors font-medium text-[14px]"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Selection
+          Back to Team
         </Link>
         
         <div className="flex items-center gap-4 mb-2">

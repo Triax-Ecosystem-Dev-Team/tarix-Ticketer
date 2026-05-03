@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Map as MapIcon, 
@@ -15,11 +15,11 @@ import {
   TrendingUp,
   BarChart3,
   X,
-  UserPlus,
   UserCog,
 } from 'lucide-react';
 import clsx from 'clsx';
 import logoWhite from '../../../assets/images/logo-white.webp';
+import { useAuthStore } from '../../auth/store/useAuthStore';
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -28,14 +28,25 @@ interface AdminSidebarProps {
 
 const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const [isTripsOpen, setIsTripsOpen] = useState(true);
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Close sidebar on nav on mobile
   const handleNav = () => {
     onClose();
   };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  // Build initials from user name for avatar fallback
+  const initials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : '??';
 
   return (
     <aside
@@ -151,7 +162,6 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           { to: '/admin/revenue', icon: TrendingUp,  label: 'Revenue'  },
           { to: '/admin/reports', icon: BarChart3,   label: 'Reports'  },
           { to: '/admin/settings',icon: Settings,    label: 'Settings' },
-          { to: '/admin/team/add',icon: UserPlus,    label: 'Add Team Member' },
           { to: '/admin/team',    icon: UserCog,     label: 'Member Manager' },
         ].map(({ to, icon: Icon, label }) => (
           <Link
@@ -174,17 +184,24 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
 
       {/* User Profile + Logout */}
       <div className="p-4 border-t border-[#1e293b]">
-        <div className="flex items-center gap-3 mb-6 px-2">
-          <div className="w-10 h-10 rounded-full bg-[#0EA5E9] flex items-center justify-center text-white font-medium flex-shrink-0">
-            JM
+        <div className="flex items-center gap-3 mb-4 px-2">
+          <div className="w-10 h-10 rounded-full bg-[#0EA5E9] flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden">
+            {user?.avatar ? (
+              <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-sm">{initials}</span>
+            )}
           </div>
           <div className="overflow-hidden">
-            <p className="text-sm font-medium text-white truncate">John Mark</p>
-            <p className="text-xs text-[#64748B] truncate">john@tarix.com</p>
+            <p className="text-sm font-semibold text-white truncate">{user?.name || 'Admin'}</p>
+            <p className="text-xs text-[#64748B] truncate">{user?.email || '—'}</p>
           </div>
         </div>
 
-        <button className="flex items-center gap-3 px-2 text-[#EF4444] hover:text-red-400 transition-colors">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-2 py-2 w-full rounded-lg text-[#EF4444] hover:text-red-400 hover:bg-red-500/10 transition-all"
+        >
           <LogOut className="w-5 h-5" />
           <span className="font-medium text-sm">Logout</span>
         </button>

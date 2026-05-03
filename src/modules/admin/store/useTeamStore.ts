@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import api from '../../../shared/api';
 import { useFleetStore } from './useFleetStore';
 
-export type MemberRole = 'Driver' | 'Ticketer';
+export type MemberRole = 'Admin' | 'Driver' | 'Ticketer';
 export type MemberStatus = 'Active' | 'On Trip' | 'Inactive';
 
 export interface Member {
@@ -26,6 +26,7 @@ export interface Member {
   };
   station?: string;
   workShift?: string;
+  department?: string; // For Admins
   monthlySalary: number;
   employmentDate: string;
 }
@@ -116,22 +117,23 @@ export const useTeamStore = create<TeamState>((set, get) => ({
         role: 'Driver' as MemberRole,
       }));
 
-      const ticketers: Member[] = staffRes.data.staff.map((s: any) => ({
-        id: s.ticketer?.id || s.id,
-        displayId: s.ticketer?.idNumber || `TKT-${s.id.slice(0, 4)}`,
+      const staffMembers: Member[] = staffRes.data.staff.map((s: any) => ({
+        id: s.id,
+        displayId: s.ticketer?.idNumber || (s.role === 'Admin' ? `ADM-${s.id.slice(0, 4)}` : `TKT-${s.id.slice(0, 4)}`),
         fullName: s.name,
         email: s.email,
         phone: s.ticketer?.phone || s.phone,
-        role: 'Ticketer' as MemberRole,
+        role: s.role as MemberRole,
         status: 'Active',
-        monthlySalary: s.ticketer?.monthlySalary,
-        employmentDate: s.ticketer?.employmentDate,
+        monthlySalary: s.ticketer?.monthlySalary || 0,
+        employmentDate: s.ticketer?.employmentDate || s.createdAt,
         station: s.ticketer?.station,
         workShift: s.ticketer?.workShift,
-        profilePhotoUrl: s.ticketer?.profilePhotoUrl
+        profilePhotoUrl: s.ticketer?.profilePhotoUrl || s.avatar,
+        department: s.role === 'Admin' ? 'Management' : undefined
       }));
 
-      set({ members: [...drivers, ...ticketers], isLoading: false });
+      set({ members: [...drivers, ...staffMembers], isLoading: false });
     } catch (err: any) {
       set({ 
         error: err.response?.data?.message || 'Failed to fetch team members', 

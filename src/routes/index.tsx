@@ -32,7 +32,7 @@ import {
   RevenueAnalytics,
   ReportsAnalytics,
   Settings,
-  AddTeamMember,
+  AddAdmin,
   MemberManager,
   AddTicketer,
   AddDriver,
@@ -230,8 +230,8 @@ export const router = createBrowserRouter([
         element: <ReportsAnalytics />,
       },
       {
-        path: 'team/add',
-        element: <AddTeamMember />,
+        path: 'team/add/admin',
+        element: <AddAdmin />,
       },
       {
         path: 'team/add/ticketer',

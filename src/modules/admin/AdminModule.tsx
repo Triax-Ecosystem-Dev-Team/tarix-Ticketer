@@ -7,7 +7,7 @@ export { default as DriverManagement } from './views/DriverManagement';
 export { default as RevenueAnalytics } from './views/RevenueAnalytics';
 export { default as ReportsAnalytics } from './views/ReportsAnalytics';
 export { default as Settings } from './views/Settings';
-export { default as AddTeamMember } from './views/AddTeamMember';
+export { default as AddAdmin } from './views/AddAdmin';
 export { default as MemberManager } from './views/MemberManager';
 export { default as AddTicketer } from './views/AddTicketer';
 export { default as AddDriver } from './views/AddDriver';

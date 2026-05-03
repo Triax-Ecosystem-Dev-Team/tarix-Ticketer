@@ -7,7 +7,7 @@ import {
   Clock, Eye, Edit, Trash2,
   X, AlertTriangle, Loader2, Ticket, BusFront, UserCheck
 } from 'lucide-react';
-import { useTeamStore, useTeamStats, useFilteredMembers, Member } from '../store/useTeamStore';
+import { useTeamStore, useTeamStats, useFilteredMembers, Member, MemberRole } from '../store/useTeamStore';
 import clsx from 'clsx';
 
 const getStatusStyles = (status: string) => {
@@ -28,9 +28,10 @@ const MemberManager = () => {
     setFilterStatus 
   } = useTeamStore();
   
-  const members = useFilteredMembers('Ticketer');
+  const [activeRole, setActiveRole] = useState<MemberRole>('Ticketer');
+  const members = useFilteredMembers(activeRole);
   const getStats = useTeamStats();
-  const stats = getStats('Ticketer');
+  const stats = getStats(activeRole);
   
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
@@ -55,8 +56,8 @@ const MemberManager = () => {
           <Users className="w-6 h-6 text-[#0EA5E9]" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold text-[#1E293B]">Ticketing Staff</h1>
-          <p className="text-[#64748B] text-sm font-medium">Manage station agents and ticketing personnel</p>
+          <h1 className="text-2xl font-semibold text-[#1E293B]">{activeRole} Management</h1>
+          <p className="text-[#64748B] text-sm font-medium">Manage your {activeRole.toLowerCase()}s and organization personnel</p>
         </div>
       </div>
 
@@ -73,18 +74,38 @@ const MemberManager = () => {
         ))}
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex bg-slate-50 p-1 rounded-xl w-fit">
-          <select 
-            className="bg-transparent text-[14px] font-bold text-[#1e293b] outline-none cursor-pointer px-4 py-2"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="All">All Staff</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
+          <div className="flex bg-slate-50 p-1 rounded-xl">
+            {(['Ticketer', 'Driver', 'Admin'] as MemberRole[]).map((role) => (
+              <button
+                key={role}
+                onClick={() => setActiveRole(role)}
+                className={clsx(
+                  "px-4 py-2 rounded-lg text-[13px] font-bold transition-all whitespace-nowrap",
+                  activeRole === role 
+                    ? "bg-white text-[#1e293b] shadow-sm" 
+                    : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                {role}s
+              </button>
+            ))}
+          </div>
+          
+          <div className="h-8 w-[1px] bg-slate-200 mx-2 hidden lg:block" />
+
+          <div className="flex bg-slate-50 p-1 rounded-xl w-fit">
+            <select 
+              className="bg-transparent text-[13px] font-bold text-[#1e293b] outline-none cursor-pointer px-3 py-1.5"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="All">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
         </div>
 
         <div className="relative flex-1 max-w-xl">
@@ -99,10 +120,10 @@ const MemberManager = () => {
         </div>
 
         <Link 
-          to="/admin/team/add/ticketer"
-          className="flex items-center justify-center gap-2 bg-[#1e293b] hover:bg-[#0f172a] text-white px-6 py-2.5 rounded-xl font-bold text-[14px] transition-all shadow-md active:scale-[0.98]"
+          to={`/admin/team/add/${activeRole.toLowerCase()}`}
+          className="flex items-center justify-center gap-2 bg-[#1e293b] hover:bg-[#0f172a] text-white px-6 py-2.5 rounded-xl font-bold text-[14px] transition-all shadow-md active:scale-[0.98] whitespace-nowrap"
         >
-          Add Staff
+          Add {activeRole}
         </Link>
       </div>
 
@@ -122,6 +143,8 @@ const MemberManager = () => {
                     {member.profilePhotoUrl ? (
                       <img src={member.profilePhotoUrl} className="w-full h-full object-cover" alt={member.fullName} />
                     ) : (
+                      member.role === 'Driver' ? <BusFront className="w-6 h-6 text-[#0EA5E9]" /> : 
+                      member.role === 'Admin' ? <Shield className="w-6 h-6 text-[#0EA5E9]" /> :
                       <Ticket className="w-6 h-6 text-[#0EA5E9]" />
                     )}
                   </div>
@@ -168,8 +191,13 @@ const MemberManager = () => {
                   <span className="text-[13px] font-medium">{member.phone}</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-slate-500">
-                  <MapPin className="w-4 h-4 text-slate-400" />
-                  <span className="text-[13px] font-medium truncate">{member.station || 'Not assigned'}</span>
+                  {member.role === 'Driver' ? <BusFront className="w-4 h-4 text-slate-400" /> : <MapPin className="w-4 h-4 text-slate-400" />}
+                  <span className="text-[13px] font-medium truncate">
+                    {member.role === 'Driver' 
+                      ? (member.assignedBus?.registrationNumber || 'No Bus Assigned') 
+                      : (member.role === 'Admin' ? (member.department || 'Management') : (member.station || 'Not assigned'))
+                    }
+                  </span>
                 </div>
               </div>
 
@@ -211,6 +239,8 @@ const MemberManager = () => {
                   {selectedMember.profilePhotoUrl ? (
                     <img src={selectedMember.profilePhotoUrl} className="w-full h-full object-cover" alt={selectedMember.fullName} />
                   ) : (
+                    selectedMember.role === 'Driver' ? <BusFront className="w-8 h-8 text-[#0EA5E9]" /> : 
+                    selectedMember.role === 'Admin' ? <Shield className="w-8 h-8 text-[#0EA5E9]" /> :
                     <Ticket className="w-8 h-8 text-[#0EA5E9]" />
                   )}
                 </div>
@@ -230,8 +260,15 @@ const MemberManager = () => {
                   <h4 className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-4">Job Profile</h4>
                   <div className="bg-[#f8fafc] rounded-2xl p-5 border border-slate-50 space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-[13px] font-bold text-slate-500">Station</span>
-                      <span className="text-[14px] font-black text-[#1e293b]">{selectedMember.station}</span>
+                      <span className="text-[13px] font-bold text-slate-500">
+                        {selectedMember.role === 'Driver' ? 'Assigned Bus' : (selectedMember.role === 'Admin' ? 'Department' : 'Station')}
+                      </span>
+                      <span className="text-[14px] font-black text-[#1e293b]">
+                        {selectedMember.role === 'Driver' 
+                          ? (selectedMember.assignedBus?.registrationNumber || 'N/A') 
+                          : (selectedMember.role === 'Admin' ? (selectedMember.department || 'Management') : (selectedMember.station || 'N/A'))
+                        }
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[13px] font-bold text-slate-500">Shift</span>
@@ -265,10 +302,15 @@ const MemberManager = () => {
                 Close
               </button>
               <Link 
-                to={`/admin/team/edit/ticketer/${selectedMember.id}`}
-                className="flex-1 py-3.5 bg-[#1e293b] text-white rounded-xl text-[15px] font-bold shadow-sm hover:bg-[#0f172a] transition-all text-center"
+                to={selectedMember.role === 'Admin' ? '#' : `/admin/team/edit/${selectedMember.role.toLowerCase()}/${selectedMember.id}`}
+                className={clsx(
+                  "flex-1 py-3.5 rounded-xl text-[15px] font-bold shadow-sm transition-all text-center",
+                  selectedMember.role === 'Admin' 
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                    : "bg-[#1e293b] text-white hover:bg-[#0f172a]"
+                )}
               >
-                Edit Profile
+                {selectedMember.role === 'Admin' ? 'View-Only Profile' : 'Edit Profile'}
               </Link>
             </div>
           </div>
