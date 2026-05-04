@@ -22,7 +22,6 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
   const onSubmit = (data: SearchFilters) => {
     setSearchFilters(data);
     onSearch?.(data);
-    console.log('Search filters:', data);
   };
 
   return (
@@ -42,14 +41,11 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-blue" />
             <input
               type="text"
-              {...register('departureTerminal', { required: 'Origin is required' })}
+              {...register('departureTerminal')}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-border-gray rounded-lg text-sm text-text-dark placeholder:text-text-gray focus:outline-none focus:ring-2 focus:ring-primary-blue/20 focus:border-primary-blue transition-colors"
               placeholder="Edo, Benin (HQ)"
             />
           </div>
-          {errors.departureTerminal && (
-            <p className="text-xs text-red-500 mt-1">{errors.departureTerminal.message}</p>
-          )}
         </div>
 
         {/* Arrival Terminal */}
@@ -61,14 +57,11 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF5252]" />
             <input
               type="text"
-              {...register('arrivalTerminal', { required: 'Destination is required' })}
+              {...register('arrivalTerminal')}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-border-gray rounded-lg text-sm text-text-dark placeholder:text-text-gray focus:outline-none focus:ring-2 focus:ring-primary-blue/20 focus:border-primary-blue transition-colors"
               placeholder="Lagos, Iyana-Ipaja"
             />
           </div>
-          {errors.arrivalTerminal && (
-            <p className="text-xs text-red-500 mt-1">{errors.arrivalTerminal.message}</p>
-          )}
         </div>
 
         {/* Date Field */}

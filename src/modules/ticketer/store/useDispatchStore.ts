@@ -38,6 +38,17 @@ interface DispatchState {
   passengers: Passenger[];
   isLoadingPassengers: boolean;
   
+  // Sales Stats State
+  salesData: {
+    totalTickets: number;
+    totalRevenue: number;
+    breakdown: {
+      cash: { tickets: number; revenue: number };
+      transfer: { tickets: number; revenue: number };
+      card: { tickets: number; revenue: number };
+    };
+  } | null;
+  
   // Actions
   setSearchQuery: (query: string) => void;
   setActiveTab: (tab: DispatchState['activeTab']) => void;
@@ -47,6 +58,7 @@ interface DispatchState {
   fetchFleetStatus: () => Promise<void>;
   fetchTripPassengers: (tripId: string) => Promise<void>;
   updateBusStatus: (busId: string, newStatus: string, actualArrival?: string) => Promise<void>;
+  fetchSalesStats: () => Promise<void>;
   
   // Getters
   getFilteredBuses: () => BusStatus[];
@@ -63,6 +75,7 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
   multiStatusFilters: [],
   passengers: [],
   isLoadingPassengers: false,
+  salesData: null,
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   
@@ -106,6 +119,15 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
     } catch (error) {
       console.error('Failed to update bus status:', error);
       throw error;
+    }
+  },
+
+  fetchSalesStats: async () => {
+    try {
+      const response = await api.get('/dispatch/sales-stats');
+      set({ salesData: response.data.data });
+    } catch (error) {
+      console.error('Failed to fetch sales stats:', error);
     }
   },
 

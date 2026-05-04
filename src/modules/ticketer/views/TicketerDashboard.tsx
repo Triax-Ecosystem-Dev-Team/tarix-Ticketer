@@ -20,7 +20,6 @@ const TicketerDashboard: React.FC = () => {
   }, [fetchTrips]);
 
   const handleSearch = () => {
-    console.log('Search triggered');
     // When searching, reset to page 1
     setPageAndFetch(1);
   };
@@ -44,7 +43,7 @@ const TicketerDashboard: React.FC = () => {
               Available Trips
             </h1>
             <span className="text-sm text-text-gray font-medium">
-              Found {paginationMeta.totalCount} trips
+              Found {paginationMeta.totalCount} {paginationMeta.totalCount === 1 ? 'trip' : 'trips'}
             </span>
           </div>
 

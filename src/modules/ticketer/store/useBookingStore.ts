@@ -31,6 +31,7 @@ interface BookingState {
 
     // Registered Passenger Info
     registeredPassenger: RegisteredPassenger | null;
+    setRegisteredPassenger: (passenger: RegisteredPassenger | null) => void;
     fetchPassengerByLoginId: (loginId: string) => Promise<RegisteredPassenger | null>;
     registerPassenger: (details: Omit<RegisteredPassenger, 'id' | 'loginId'>) => Promise<RegisteredPassenger | null>;
 
@@ -138,9 +139,16 @@ export const useBookingStore = create<BookingState>()(
                 ...additionalFilters,
             };
 
-            // Don't send empty strings or nulls
+            // Don't send empty strings, nulls, default passenger count, or placeholder strings
             Object.keys(params).forEach(key => {
-                if (params[key] === '' || params[key] === null || params[key] === undefined) {
+                if (
+                    params[key] === '' ||
+                    params[key] === null ||
+                    params[key] === undefined ||
+                    (key === 'passengers' && params[key] === 1) ||
+                    (key === 'departureTerminal' && params[key] === 'Edo, Benin (HQ)') ||
+                    (key === 'arrivalTerminal' && params[key] === 'Lagos, Iyana-Ipaja')
+                ) {
                     delete params[key];
                 }
             });
@@ -165,13 +173,18 @@ export const useBookingStore = create<BookingState>()(
 
     // Registered Passenger Info
     registeredPassenger: null,
+    setRegisteredPassenger: (passenger) => set({ registeredPassenger: passenger }),
     fetchPassengerByLoginId: async (loginId: string) => {
         set({ isLoading: true, error: null });
         try {
             const response = await api.get(`/auth/passenger/${loginId}`);
-            if (response.data.success) {
+            if (response.data.success && response.data.data.exists !== false) {
                 set({ registeredPassenger: response.data.data });
                 return response.data.data;
+            }
+            if (response.data.data?.exists === false) {
+                set({ error: "Passenger not found", registeredPassenger: null });
+                return null;
             }
             return null;
         } catch (error: any) {

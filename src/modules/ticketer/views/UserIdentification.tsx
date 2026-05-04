@@ -3,19 +3,53 @@ import { User, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useBookingStore } from '../store/useBookingStore';
 import LoadingScreen from '../../../shared/components/LoadingScreen';
+import { useAuthStore } from '../../auth/store/useAuthStore';
+import { RegisteredPassenger } from '../types';
 
 const UserIdentification: React.FC = () => {
   const navigate = useNavigate();
-  const { fetchPassengerByLoginId, error, isLoading } = useBookingStore();
+  const { user: authUser } = useAuthStore();
+  const { fetchPassengerByLoginId, setRegisteredPassenger, error, isLoading } = useBookingStore();
   const [userId, setUserId] = useState('');
+
+  // Auto-sync if user is logged in as Passenger
+  React.useEffect(() => {
+    if (authUser && authUser.role === 'Passenger') {
+      const nameParts = authUser.name.split(' ');
+      const firstname = nameParts[0] || '';
+      const surname = nameParts.slice(1).join(' ') || '';
+      
+      const passengerData: RegisteredPassenger = {
+        id: authUser.id,
+        loginId: `PASS-${authUser.id.slice(0, 8)}`,
+        title: 'Mr',
+        firstname,
+        surname,
+        email: authUser.email,
+        phone: authUser.phone || '',
+        dateOfBirth: '',
+        occupation: '',
+        state: '',
+        localGovernment: '',
+        nationality: 'Nigerian',
+        address: '',
+        officePhone: '',
+        nextOfKinName: '',
+        nextOfKinPhone: '',
+        nextOfKinAddress: '',
+        nextOfKinRelationship: ''
+      };
+      
+      setRegisteredPassenger(passengerData);
+      navigate('/booking/select-seat');
+    }
+  }, [authUser, setRegisteredPassenger, navigate]);
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (userId.trim()) {
       const passenger = await fetchPassengerByLoginId(userId);
       if (passenger) {
-        // Automatically populate booking with this passenger's info
-        // (Assuming 1 passenger for now, or the first one in the manifest)
         navigate('/booking/select-seat');
       }
     }

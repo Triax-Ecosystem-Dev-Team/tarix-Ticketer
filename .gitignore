@@ -22,7 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-backend/src
+# backend/src removed to track backend changes
 .env
 .gitignore
 backend/frontend_integration_guide.md
