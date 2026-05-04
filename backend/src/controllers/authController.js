@@ -167,6 +167,7 @@ const loginUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      avatar: user.avatar,
       token: generateToken(user.id),
     }, 'Login successful');
 
@@ -189,6 +190,7 @@ const getUserProfile = async (req, res, next) => {
         name: true,
         email: true,
         role: true,
+        avatar: true,
       },
     });
 
