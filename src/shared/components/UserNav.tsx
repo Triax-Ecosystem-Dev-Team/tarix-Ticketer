@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, User, Settings, HelpCircle, LogOut } from 'lucide-react';
 import { useAuthStore } from '../../modules/auth/store/useAuthStore';
+import { getAvatarSrc } from '../utils/imageUtils';
 
 const UserNav = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -56,8 +57,8 @@ const UserNav = () => {
       >
         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary-blue flex items-center
                         justify-center text-white font-bold text-xs sm:text-sm shadow-sm group-hover:bg-[#0086E6] transition-colors overflow-hidden">
-          {user.avatar ? (
-            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+          {getAvatarSrc(user.avatar) ? (
+            <img src={getAvatarSrc(user.avatar)!} alt={user.name} className="w-full h-full object-cover" />
           ) : (
             getInitials(user.name)
           )}

@@ -6,6 +6,7 @@ import {
   ArrowLeft, Camera 
 } from 'lucide-react';
 import { useAuthStore } from '../../../modules/auth/store/useAuthStore';
+import { getAvatarSrc } from '../../utils/imageUtils';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ const Profile: React.FC = () => {
               <div className="relative group">
                 <div className="w-28 h-28 rounded-full bg-[#0ea5e9] flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-blue-50 overflow-hidden">
                   {photoPreview ? (
-                    <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={getAvatarSrc(photoPreview)} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'ST'
                   )}
