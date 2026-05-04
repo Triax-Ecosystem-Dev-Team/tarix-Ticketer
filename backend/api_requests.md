@@ -98,3 +98,17 @@ curl -X POST http://localhost:5000/api/fleet \
   -F "transmissionType=Manual" \
   -F "maintenanceStatus=Excellent"
 ```
+
+---
+
+## 6. User Account (All Registered Users)
+
+### Update Profile
+*Note: This endpoint now requires `multipart/form-data` to support avatar uploads.*
+```bash
+# Update name and upload a new avatar image
+curl -X PATCH http://localhost:5000/api/users/profile \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -F "name=John Doe Updated" \
+  -F "avatar=@/path/to/your/photo.jpg"
+```

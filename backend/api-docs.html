@@ -425,10 +425,58 @@
             </div>
         </div>
 
+        <!-- USER PROFILE SECTION -->
+        <h2 id="user-profile">User Profile & Security</h2>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method patch">PATCH</span>
+                <span class="path">/users/profile</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update user profile details. This endpoint supports avatar uploads using <strong>multipart/form-data</strong>.</p>
+                <div class="section-title">Form Data Fields</div>
+                <table>
+                    <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td><code>name</code></td>
+                        <td>String</td>
+                        <td>User's full name.</td>
+                    </tr>
+                    <tr>
+                        <td><code>phone</code></td>
+                        <td>String</td>
+                        <td>Contact phone number.</td>
+                    </tr>
+                    <tr>
+                        <td><code>avatar</code></td>
+                        <td>File</td>
+                        <td>Image file (JPG/PNG/WEBP). Uploaded to Supabase.</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="endpoint" id="user-password">
+            <div class="endpoint-header">
+                <span class="method patch">PATCH</span>
+                <span class="path">/users/security/password</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Update account password. Requires current password verification.</p>
+            </div>
+        </div>
+
         <div class="troubleshooting" id="frontend-issues">
             <h3>DevOps Checklist</h3>
             <ul>
-                <li><strong>Supabase Pooling:</strong> Use Port 6543 for app queries.</li>
+                <li><strong>Supabase Storage:</strong> Public URL generated for <code>profiles</code> bucket.</li>
                 <li><strong>Prisma 7:</strong> Manage connections in <code>prisma.config.ts</code>.</li>
                 <li><strong>CORS:</strong> Ensure origin matches your frontend environment.</li>
             </ul>
