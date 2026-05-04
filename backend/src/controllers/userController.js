@@ -7,12 +7,23 @@ const { sendResponse } = require('../utils/responseFormatter');
 // @access  Private
 const updateProfile = async (req, res, next) => {
   try {
-    const { name, phone, avatar } = req.body;
+    const { name, phone } = req.body;
+    let { avatar } = req.body;
     const userId = req.user.id;
+
+    // Handle file upload if present
+    if (req.file) {
+      const { uploadToSupabase } = require('../utils/supabaseStorage');
+      avatar = await uploadToSupabase(req.file.buffer, req.file.originalname, 'profiles');
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { name, phone, avatar },
+      data: { 
+        name, 
+        phone, 
+        ...(avatar !== undefined && { avatar })
+      },
       select: {
         id: true, name: true, email: true, role: true,
         phone: true, avatar: true, twoFaEnabled: true,

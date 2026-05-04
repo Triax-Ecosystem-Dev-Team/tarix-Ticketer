@@ -23,7 +23,7 @@ interface AuthState {
   login: (credentials: any, rememberMe: boolean) => Promise<User>;
   logout: () => void;
   initialize: () => void;
-  updateProfile: (data: Partial<User>) => Promise<void>;
+  updateProfile: (data: Partial<User> | FormData) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   toggle2FA: (enabled: boolean) => Promise<void>;
   updatePreferences: (prefs: Partial<Pick<User, 'theme' | 'notifEmail' | 'notifSms' | 'notifPush'>>) => Promise<void>;

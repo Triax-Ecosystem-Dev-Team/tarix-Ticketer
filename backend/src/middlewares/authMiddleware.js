@@ -19,11 +19,12 @@ const protect = async (req, res, next) => {
         return sendResponse(res, 401, null, 'Not authorized, no valid token provided');
       }
 
+      // Verify token using our local JWT_SECRET
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
 
       const userId = decoded.id;
       
-      // Try User table (Admin/Ticketer)
+      // Sync with our local User table
       req.user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -35,28 +36,21 @@ const protect = async (req, res, next) => {
       });
 
       if (!req.user) {
-        return sendResponse(res, 401, null, 'User no longer exists');
+        return sendResponse(res, 401, null, 'User no longer exists in our database');
       }
 
       next();
     } catch (error) {
-      console.error(error);
+      console.error('JWT Verification Error:', error.message);
       return sendResponse(res, 401, null, 'Not authorized, token failed');
     }
-  }
-
-  if (!token) {
-    return sendResponse(res, 401, null, 'Not authorized, no token');
+  } else {
+    return sendResponse(res, 401, null, 'Not authorized, no token provided');
   }
 };
 
-/**
- * Generic RBAC middleware
- * Usage: restrictTo('Admin', 'Ticketer')
- */
 const restrictTo = (...roles) => {
   return (req, res, next) => {
-    // 1) req.user is populated by the 'protect' middleware
     if (!req.user || !roles.includes(req.user.role)) {
       return sendResponse(
         res, 
@@ -68,7 +62,6 @@ const restrictTo = (...roles) => {
     next();
   };
 };
-
 
 const admin = (req, res, next) => {
   if (req.user && req.user.role === 'Admin') {

@@ -43,23 +43,20 @@ const Profile: React.FC = () => {
     setIsSaving(true);
     setMessage(null);
     try {
-      // In a real app, you'd upload the photo to S3/Cloudinary first
-      // For now, we'll send the data. If profilePhoto exists, we'd handle it.
-      // We'll simulate the avatar update by passing the preview URL if it's a blob
-      
-      const updateData: any = {
-        name: formData.name,
-        phone: formData.phone,
-      };
+      // Create FormData to support file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('phone', formData.phone);
 
-      // Mock avatar persistence logic
-      if (photoPreview) {
-        updateData.avatar = photoPreview;
-      } else {
-        updateData.avatar = null;
+      if (profilePhoto) {
+        // Append the actual File object, not the blob preview URL
+        formDataToSend.append('avatar', profilePhoto);
+      } else if (!photoPreview) {
+        // If photoPreview is null, it means the user explicitly removed the photo
+        formDataToSend.append('avatar', ''); 
       }
 
-      await updateProfile(updateData);
+      await updateProfile(formDataToSend);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       
       // Clear success message after 3 seconds
