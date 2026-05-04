@@ -22,11 +22,12 @@ const upload = multer({
  * Uploads a file buffer to Supabase Storage
  * @param {Buffer} fileBuffer - The file data from multer
  * @param {string} originalName - Original filename for extension extraction
+ * @param {string} mimeType - The MIME type (e.g., image/jpeg)
  * @param {string} bucketName - 'profiles' or 'documents'
  * @param {string} folderPath - Optional subfolder (e.g., 'licenses')
  * @returns {Promise<string>} - Public URL or internal file path
  */
-const uploadToSupabase = async (fileBuffer, originalName, bucketName, folderPath = '') => {
+const uploadToSupabase = async (fileBuffer, originalName, mimeType, bucketName, folderPath = '') => {
   try {
     const fileExt = originalName.split('.').pop();
     const fileName = `${Date.now()}-${Math.floor(Math.random() * 10000)}.${fileExt}`;
@@ -35,7 +36,7 @@ const uploadToSupabase = async (fileBuffer, originalName, bucketName, folderPath
     const { data, error } = await supabase.storage
       .from(bucketName)
       .upload(filePath, fileBuffer, {
-        contentType: 'auto',
+        contentType: mimeType,
         upsert: true
       });
 

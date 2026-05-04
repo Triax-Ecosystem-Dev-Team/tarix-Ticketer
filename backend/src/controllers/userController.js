@@ -14,7 +14,7 @@ const updateProfile = async (req, res, next) => {
     // Handle file upload if present
     if (req.file) {
       const { uploadToSupabase } = require('../utils/supabaseStorage');
-      avatar = await uploadToSupabase(req.file.buffer, req.file.originalname, 'profiles');
+      avatar = await uploadToSupabase(req.file.buffer, req.file.originalname, req.file.mimetype, 'profiles');
     }
 
     const updatedUser = await prisma.user.update({
