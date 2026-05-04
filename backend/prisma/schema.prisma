@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -32,10 +33,21 @@ enum PaymentStatus {
   refunded
 }
 
+// Updated: Professional naming for Sales Overview grouping
 enum PaymentMethod {
-  card
-  cash
-  transfer
+  Card
+  Cash
+  Transfer
+}
+
+// Added: New TripStatus enum for robust lifecycle tracking
+enum TripStatus {
+  Scheduled
+  Active
+  InTransit
+  Completed
+  Delayed
+  Cancelled
 }
 
 model User {
@@ -97,7 +109,9 @@ model Trip {
   driver            Driver?   @relation(fields: [driverId], references: [id])
   busModelId        String?
   busModel          BusModel? @relation(fields: [busModelId], references: [id])
-  status            String    @default("Active")
+  
+  // Updated: Now using TripStatus enum with Scheduled as the default
+  status            TripStatus @default(Scheduled)
   actualArrival     String?
 }
 
@@ -112,7 +126,7 @@ model Booking {
   status          BookingStatus  @default(pending)
   paymentMethod     PaymentMethod?
   paymentStatus     PaymentStatus  @default(pending)
-  paymentReference  String?        // Future: stores Paystack/Stripe transaction ID
+  paymentReference  String?        
   hasExtraBaggage   Boolean        @default(false)
   extraBaggage    Int            @default(0)
   baggageFee      Float          @default(0.0)
@@ -179,7 +193,7 @@ model Driver {
 model Bus {
   id                 String    @id @default(uuid())
   registrationNumber String    @unique
-  nickname           String?
+  nickname           String?   // Used for dynamic naming logic
   chassisNumber      String    @unique
   engineNumber       String    @unique
   ownerName          String
@@ -187,12 +201,18 @@ model Bus {
   registrationDate   DateTime?
   insuranceProvider  String?
   insuranceExpiry    DateTime?
+  
+  // Professional Brand Identifiers
   manufacturer       String
   model              String
+  
   year               Int
   color              String
   fuelType           String
+  
+  // Explicit Capacity field
   totalCapacity      Int
+  
   availableSeats     Int
   wheelchairSeats    Int?
   busLength          Float?
@@ -254,11 +274,11 @@ model BusModel {
 
 model Expense {
   id          String   @id @default(uuid())
-  category    String   // Fuel, Maintenance, Salaries, etc.
+  category    String   
   amount      Float
   date        DateTime @default(now())
   description String?
-  status      String   @default("On Budget") // On Budget, Over Budget
+  status      String   @default("On Budget") 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -285,4 +305,3 @@ model ReportHistory {
   status      String   @default("Ready")
   createdAt   DateTime @default(now())
 }
-
