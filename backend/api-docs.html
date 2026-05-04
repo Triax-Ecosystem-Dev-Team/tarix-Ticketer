@@ -254,6 +254,13 @@
         </div>
 
         <div class="nav-group">
+            <div class="nav-title">Dispatch Monitoring</div>
+            <a href="#dispatch-fleet" class="nav-link">Live Fleet Status</a>
+            <a href="#dispatch-sales" class="nav-link">Daily Sales Stats</a>
+            <a href="#dispatch-status" class="nav-link">Update Trip Status</a>
+        </div>
+
+        <div class="nav-group">
             <div class="nav-title">Auth Endpoints</div>
             <a href="#auth-register" class="nav-link">Register</a>
             <a href="#auth-login" class="nav-link">Login</a>
@@ -275,7 +282,6 @@
 
         <div class="nav-group">
             <div class="nav-title">Admin Management</div>
-            <a href="#admin-stats" class="nav-link">Dashboard Stats</a>
             <a href="#admin-staff" class="nav-link">Staff Management</a>
             <a href="#admin-drivers" class="nav-link">Driver Management</a>
             <a href="#admin-revenue" class="nav-link">Revenue Trend</a>
@@ -294,12 +300,6 @@
             <a href="#user-2fa" class="nav-link">Toggle 2FA</a>
             <a href="#user-preferences" class="nav-link">Update Preferences</a>
         </div>
-
-        <div class="nav-group">
-            <div class="nav-title">System</div>
-            <a href="#testing" class="nav-link">Verification Tests</a>
-            <a href="#frontend-issues" class="nav-link">Troubleshooting</a>
-        </div>
     </aside>
 
     <main>
@@ -314,8 +314,61 @@
             <pre>Authorization: Bearer <your_jwt_token></pre>
         </section>
 
+        <!-- DISPATCH SECTION -->
+        <h2 id="dispatch">Dispatch Monitoring</h2>
+
+        <div class="endpoint" id="dispatch-fleet">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="path">/dispatch/fleet-status</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Fetch real-time occupancy and status for all active and scheduled trips. Uses dynamic <strong>Manufacturer + Model</strong> naming logic.</p>
+                <div class="section-title">Access Role</div>
+                <p>Admin, Ticketer</p>
+            </div>
+        </div>
+
+        <div class="endpoint" id="dispatch-sales">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="path">/dispatch/sales-stats</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Fetch daily revenue overview grouped by payment method (Cash, Transfer, Card).</p>
+                <div class="section-title">Success Response (200)</div>
+                <pre>{
+  "success": true,
+  "data": {
+    "totalTickets": 45,
+    "totalRevenue": 850000,
+    "breakdown": [
+      { "method": "Cash", "count": 20, "amount": 350000 },
+      { "method": "Transfer", "count": 15, "amount": 300000 },
+      { "method": "Card", "count": 10, "amount": 200000 }
+    ]
+  }
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint" id="dispatch-status">
+            <div class="endpoint-header">
+                <span class="method patch">PATCH</span>
+                <span class="path">/dispatch/trips/:id/status</span>
+                <span class="badge badge-auth">Private</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Manually update a trip's lifecycle status.</p>
+                <div class="section-title">Valid Enums</div>
+                <code>Scheduled</code>, <code>Active</code>, <code>InTransit</code>, <code>Completed</code>, <code>Delayed</code>, <code>Cancelled</code>
+            </div>
+        </div>
+
         <!-- AUTH SECTION -->
-        <h2>Auth Endpoints</h2>
+        <h2 id="auth">Auth Endpoints</h2>
 
         <div class="endpoint" id="auth-register">
             <div class="endpoint-header">
@@ -325,13 +378,6 @@
             </div>
             <div class="endpoint-body">
                 <p>Register a new user account.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "name": "Jane Doe",
-  "email": "jane@example.com",
-  "password": "password123",
-  "role": "Admin" // Admin, Ticketer, or Passenger
-}</pre>
             </div>
         </div>
 
@@ -346,33 +392,13 @@
                 <div class="section-title">Request Body</div>
                 <pre>{
   "email": "admin@tarix.com",
-  "password": "admin123"
+  "password": "password123"
 }</pre>
-                <div class="section-title">Success Response (200)</div>
-                <pre>{
-  "success": true,
-  "data": {
-    "id": "uuid...",
-    "token": "jwt_token...",
-    "role": "Admin"
-  }
-}</pre>
-            </div>
-        </div>
-
-        <div class="endpoint" id="auth-me">
-            <div class="endpoint-header">
-                <span class="method get">GET</span>
-                <span class="path">/auth/me</span>
-                <span class="badge badge-auth">Private</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Get current user profile and balance.</p>
             </div>
         </div>
 
         <!-- TRIPS SECTION -->
-        <h2 id="trips">Trips</h2>
+        <h2 id="trips">Trips Management</h2>
 
         <div class="endpoint" id="trips-get">
             <div class="endpoint-header">
@@ -381,40 +407,7 @@
                 <span class="badge badge-public">Public</span>
             </div>
             <div class="endpoint-body">
-                <p>Search and list available trips.</p>
-                <div class="section-title">Query Params</div>
-                <pre>?from=Lagos&to=Abuja&departureDate=2024-05-01</pre>
-            </div>
-        </div>
-
-        <div class="endpoint" id="trips-post">
-            <div class="endpoint-header">
-                <span class="method post">POST</span>
-                <span class="path">/trips</span>
-                <span class="badge badge-auth">Admin Only</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Create a new trip schedule.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "departureTerminal": "Lagos",
-  "arrivalTerminal": "Abuja",
-  "departureDate": "2024-05-01",
-  "departureTime": "08:00 AM",
-  "price": 15000,
-  "availableSeats": 30
-}</pre>
-            </div>
-        </div>
-
-        <div class="endpoint" id="trips-id">
-            <div class="endpoint-header">
-                <span class="method get">GET</span>
-                <span class="path">/trips/:id</span>
-                <span class="badge badge-public">Public</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Get full details of a specific trip, including assigned bus, driver, and the dynamic <code>busModel</code> containing the <code>seatMatrix</code> layout and <code>basePrice</code>.</p>
+                <p>Search and list available trips. Returns professional branding and real vehicle capacity.</p>
             </div>
         </div>
 
@@ -428,195 +421,16 @@
                 <span class="badge badge-auth">Private</span>
             </div>
             <div class="endpoint-body">
-                <p>Create a booking for one or more passengers.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "tripId": "uuid...",
-  "seats": 2,
-  "passengers": [
-    { "fullName": "John Doe", "seatNumber": "1A", "phone": "..." },
-    { "fullName": "Jane Doe", "seatNumber": "1B", "phone": "..." }
-  ],
-  "totalPrice": 30000,
-  "extraBaggage": 1
-}</pre>
-            </div>
-        </div>
-
-        <div class="endpoint" id="bookings-get">
-            <div class="endpoint-header">
-                <span class="method get">GET</span>
-                <span class="path">/bookings</span>
-                <span class="badge badge-auth">Private</span>
-            </div>
-            <div class="endpoint-body">
-                <p>List current user's bookings (or all bookings if Admin).</p>
-            </div>
-        </div>
-
-        <!-- ADMIN SECTION -->
-        <h2>Admin Management</h2>
-
-        <div class="endpoint" id="admin-staff">
-            <div class="endpoint-header">
-                <span class="method post">POST</span>
-                <span class="path">/admin/ticketers</span>
-                <span class="badge badge-auth">Admin Only</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Register a new ticketer with staff profile.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "fullName": "Staff Name",
-  "email": "staff@tarix.com",
-  "password": "...",
-  "phone": "...",
-  "idNumber": "STAFF001",
-  "station": "Lagos",
-  "monthlySalary": 50000
-}</pre>
-            </div>
-        </div>
-
-        <div class="endpoint" id="admin-drivers">
-            <div class="endpoint-header">
-                <span class="method post">POST</span>
-                <span class="path">/admin/drivers</span>
-                <span class="badge badge-auth">Admin Only</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Register a new driver.</p>
-            </div>
-        </div>
-
-        <div class="endpoint" id="admin-revenue">
-            <div class="endpoint-header">
-                <span class="method get">GET</span>
-                <span class="path">/admin/revenue-trend</span>
-                <span class="badge badge-auth">Admin Only</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Fetch daily revenue aggregation for the last 7 days.</p>
-            </div>
-        </div>
-
-        <!-- SETTINGS SECTION -->
-        <h2 id="system-settings">System Settings</h2>
-
-        <div class="endpoint" id="settings-get">
-            <div class="endpoint-header">
-                <span class="method get">GET</span>
-                <span class="path">/settings</span>
-                <span class="badge badge-public">Public</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Fetch global application settings, including dynamic pricing rules like <code>extraBaggagePrice</code>.</p>
-            </div>
-        </div>
-
-        <div class="endpoint" id="settings-put">
-            <div class="endpoint-header">
-                <span class="method put">PUT</span>
-                <span class="path">/settings</span>
-                <span class="badge badge-auth">Admin Only</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Update global application settings.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "extraBaggagePrice": 2500
-}</pre>
-            </div>
-        </div>
-
-        <!-- USER PROFILE & SECURITY SECTION -->
-        <h2 id="user-settings">User Profile & Security</h2>
-
-        <div class="endpoint" id="user-profile">
-            <div class="endpoint-header">
-                <span class="method patch">PATCH</span>
-                <span class="path">/users/profile</span>
-                <span class="badge badge-auth">Private</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Update user personal details like name, phone, and avatar.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "name": "Jane Doe",
-  "phone": "08012345678",
-  "avatar": "https://example.com/avatar.jpg"
-}</pre>
-            </div>
-        </div>
-
-        <div class="endpoint" id="user-password">
-            <div class="endpoint-header">
-                <span class="method patch">PATCH</span>
-                <span class="path">/users/security/password</span>
-                <span class="badge badge-auth">Private</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Update account password.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "currentPassword": "password123",
-  "newPassword": "newpassword123"
-}</pre>
-            </div>
-        </div>
-
-        <div class="endpoint" id="user-2fa">
-            <div class="endpoint-header">
-                <span class="method patch">PATCH</span>
-                <span class="path">/users/security/2fa</span>
-                <span class="badge badge-auth">Private</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Enable or disable 2FA for the user account.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "enabled": true
-}</pre>
-            </div>
-        </div>
-
-        <div class="endpoint" id="user-preferences">
-            <div class="endpoint-header">
-                <span class="method patch">PATCH</span>
-                <span class="path">/users/preferences</span>
-                <span class="badge badge-auth">Private</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Update user theme and notification preferences.</p>
-                <div class="section-title">Request Body</div>
-                <pre>{
-  "theme": "dark",
-  "notifEmail": true,
-  "notifSms": false,
-  "notifPush": true
-}</pre>
-            </div>
-        </div>
-
-        <!-- TESTING SECTION -->
-        <h2 id="testing">Verification & Testing</h2>
-        <div class="endpoint">
-            <div class="endpoint-header">
-                <span class="path">System Health Check</span>
-            </div>
-            <div class="endpoint-body">
-                <p>Run this script in your terminal to verify all endpoints are working correctly with the database:</p>
-                <pre>cd backend
-node test-endpoints.js</pre>
+                <p>Create a booking. Note: <code>paymentMethod</code> must be one of <code>Cash</code>, <code>Transfer</code>, or <code>Card</code>.</p>
             </div>
         </div>
 
         <div class="troubleshooting" id="frontend-issues">
-            <h3>Common Fixes</h3>
+            <h3>DevOps Checklist</h3>
             <ul>
-                <li><strong>CORS Blocked:</strong> Ensure your frontend port (e.g., 5173) is in the <code>origin</code> list in <code>server.js</code>.</li>
-                <li><strong>401 Error:</strong> Your JWT token in <code>localStorage</code> might be invalid. Log out and log back in.</li>
-                <li><strong>500 Error:</strong> Check your database connection string in <code>.env</code>.</li>
+                <li><strong>Supabase Pooling:</strong> Use Port 6543 for app queries.</li>
+                <li><strong>Prisma 7:</strong> Manage connections in <code>prisma.config.ts</code>.</li>
+                <li><strong>CORS:</strong> Ensure origin matches your frontend environment.</li>
             </ul>
         </div>
     </main>
@@ -625,9 +439,12 @@ node test-endpoints.js</pre>
         document.querySelectorAll('.nav-link').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
             });
         });
     </script>
