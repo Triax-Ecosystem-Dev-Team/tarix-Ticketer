@@ -2,6 +2,7 @@
 
 // Trip related types
 export interface Trip {
+    seatMatrix: any;
     id: string;
     departureDate: Date;
     departureTime: string;

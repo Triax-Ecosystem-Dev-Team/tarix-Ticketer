@@ -244,9 +244,10 @@ export const useBookingStore = create<BookingState>()(
     setPaymentMethod: (method) => set({ paymentMethod: method }),
     getBookingTotals: () => {
         const state = get() as BookingState;
-        const basePrice = state.selectedTrip?.busModel?.basePrice || 
+        const basePrice = state.selectedTrip?.price ||
+                          state.selectedTrip?.busModel?.basePrice || 
                           state.selectedTrip?.bus?.busModel?.basePrice || 
-                          state.selectedTrip?.price || 0;
+                          0;
         const subtotal = (state.selectedSeats?.length || 0) * basePrice;
         const baggageCost = (state.extraBaggageCount || 0) * (state.extraBaggagePrice || 0);
         const serviceFee = 500;

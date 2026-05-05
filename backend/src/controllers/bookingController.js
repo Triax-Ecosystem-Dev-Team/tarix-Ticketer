@@ -72,7 +72,7 @@ const createBooking = async (req, res, next) => {
       paymentMethod,
       totalPrice: clientTotalPrice, // ⚠️  Received but NEVER trusted for calculation
     } = req.body;
-
+    
     // ── Input Guard ────────────────────────────────────────────────────────────
     if (!tripId || !passengerId) {
       return sendResponse(res, 400, null, 'Please provide tripId and passengerId');
@@ -87,6 +87,8 @@ const createBooking = async (req, res, next) => {
     const seatIds   = Array.isArray(requestedSeats) ? requestedSeats : [];
     const seatCount = seatIds.length > 0 ? seatIds.length : 1;
     const baggage   = parseInt(extraBaggage, 10) || 0;
+ 
+    
 
     // ─── ACID $transaction ──────────────────────────────────────────────────────
     // Prisma serializable isolation prevents phantom reads between SELECT and INSERT,
@@ -104,7 +106,7 @@ const createBooking = async (req, res, next) => {
         err.statusCode = 404;
         throw err;
       }
-
+      
       if (trip.availableSeats < seatCount) {
         const err = new Error('Not enough seats available on this trip');
         err.statusCode = 400;
@@ -137,7 +139,7 @@ const createBooking = async (req, res, next) => {
       if (!settings) {
         // Bootstrap default settings if the table is empty
         settings = await tx.systemSettings.create({
-          data: { extraBaggagePrice: 2000 },
+          data: { extraBaggagePrice: 2500 },
         });
       }
 

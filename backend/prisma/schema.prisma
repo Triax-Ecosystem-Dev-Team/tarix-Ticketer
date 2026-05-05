@@ -34,9 +34,9 @@ enum PaymentStatus {
 
 // Updated: Professional naming for Sales Overview grouping
 enum PaymentMethod {
-  Card
-  Cash
-  Transfer
+  card
+  cash
+  transfer
 }
 
 // Added: New TripStatus enum for robust lifecycle tracking

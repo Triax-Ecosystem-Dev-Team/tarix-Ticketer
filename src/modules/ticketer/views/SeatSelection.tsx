@@ -50,11 +50,26 @@ const SeatSelection: React.FC = () => {
 
   // Handle nested relations dynamically, with fallback for legacy trips.
   const busModel = selectedTrip.busModel || selectedTrip.bus?.busModel;
-  const layoutMatrix: (string | null)[][] =
-    busModel?.seatMatrix ||
-    selectedTrip.bus?.seatMatrix ||
-    DEFAULT_SEAT_MATRIX;
-  const basePrice = busModel?.basePrice || selectedTrip.bus?.basePrice || selectedTrip.price;
+  // 1. Helper to safely parse or return the matrix
+  const getValidMatrix = (matrix: any) => {
+    if (Array.isArray(matrix)) return matrix;
+    try {
+      const parsed = JSON.parse(matrix);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // 2. Updated logic with parsing and fallback
+  const rawMatrix = 
+    busModel?.seatMatrix || 
+    selectedTrip.bus?.seatMatrix || 
+    selectedTrip.seatMatrix; // Added direct check on trip
+
+  const layoutMatrix: (string | null)[][] = getValidMatrix(rawMatrix) || DEFAULT_SEAT_MATRIX;
+  const basePrice = selectedTrip.price || busModel?.basePrice || selectedTrip.bus?.basePrice;
+  
 
   const totalSeatsPrice = selectedSeats.length * basePrice;
   const columnsCount = layoutMatrix[0]?.length ?? 0;
