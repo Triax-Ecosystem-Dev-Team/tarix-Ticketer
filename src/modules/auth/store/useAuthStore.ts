@@ -20,6 +20,7 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
+  hasInitialized: boolean;
   login: (credentials: any, rememberMe: boolean) => Promise<User>;
   logout: () => void;
   initialize: () => void;
@@ -34,6 +35,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: localStorage.getItem('tarix_token') || sessionStorage.getItem('tarix_token'),
   isAuthenticated: !!(localStorage.getItem('tarix_token') || sessionStorage.getItem('tarix_token')),
   isInitializing: true,
+  hasInitialized: false,
 
   login: async (credentials, rememberMe) => {
     try {
@@ -57,22 +59,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     localStorage.removeItem('tarix_token');
     sessionStorage.removeItem('tarix_token');
-    set({ user: null, token: null, isAuthenticated: false });
+    set({ user: null, token: null, isAuthenticated: false, hasInitialized: false });
   },
 
   initialize: async () => {
+    // Prevent re-running after the first initialization (e.g. after login navigation)
+    if (get().hasInitialized) return;
+
     let token = localStorage.getItem('tarix_token') || sessionStorage.getItem('tarix_token');
     if (token && token !== 'undefined' && token !== 'null') {
       try {
         const response = await api.get('/auth/me');
-        set({ user: response.data.data, isAuthenticated: true, isInitializing: false });
+        set({ user: response.data.data, isAuthenticated: true, isInitializing: false, hasInitialized: true });
       } catch (error) {
         localStorage.removeItem('tarix_token');
         sessionStorage.removeItem('tarix_token');
-        set({ user: null, token: null, isAuthenticated: false, isInitializing: false });
+        set({ user: null, token: null, isAuthenticated: false, isInitializing: false, hasInitialized: true });
       }
     } else {
-      set({ isInitializing: false });
+      set({ isInitializing: false, hasInitialized: true });
     }
   },
 
